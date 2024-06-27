@@ -4,7 +4,7 @@ export default function navbar() {
             <nav>
                 <a href="/">Home</a> |
                 <a href="/category/">Category</a> |
-                <a href="/#/">Subcategory</a> |
+                <a href="/subcategory/">Subcategory</a> |
                 <a href="/#/">Accounts</a>
             </nav>            
         </>
