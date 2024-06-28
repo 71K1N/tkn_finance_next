@@ -1,11 +1,13 @@
+import Link from 'next/link'
+
 export default function navbar() {
     return(
         <>
             <nav>
-                <a href="/">Home</a> |
-                <a href="/category/">Category</a> |
-                <a href="/subcategory/">Subcategory</a> |
-                <a href="/#/">Accounts</a>
+                <Link href="/">Home</Link> |
+                <Link href="/category/">Category</Link> |
+                <Link href="/subcategory/">Subcategory</Link> |
+                <Link href="/account/">Accounts</Link>
             </nav>            
         </>
     )
