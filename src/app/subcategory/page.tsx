@@ -5,14 +5,20 @@ import swal from 'sweetalert';
 
 export default function PageCategory() {
     const apiUrl = "http://localhost:8081"
+    
+    const [id, setId] = useState<number>(0);
 
     const [name, setName] = useState<string>("");
     const [description, setDescription] = useState<string>("");
-    const [id, setId] = useState<number>(0);
+    const [amount, setAmount] = useState<number>(0);
+    const [due_date, setDueDate] = useState<Date>(new Date());
     const [categoryId, setCategoryId] = useState(0)
+    const [subCategoryId, setSubCategoryId] = useState(0)
 
+
+    // - COLECTONS
     const [categories, setCategories] = useState<any[]>([])
-    const [subCategories, setSubCategories] = useState<any[]>([])
+    const [subCategories, setSubCategories] = useState<any[]>([])  
 
     async function getAll() {
         let response = await fetch(apiUrl + '/subcategory', { method: "GET" });
@@ -22,6 +28,11 @@ export default function PageCategory() {
     async function getCategories() {
         let response = await fetch(apiUrl + '/category', { method: "GET" })
         setCategories(await response.json());
+    }
+
+    async function getSubCategories() {
+        let response = await fetch(apiUrl + '/subcategory', { method: "GET" })
+        setSubCategories(await response.json());
     }
 
     function handleSubmit() {
@@ -102,6 +113,9 @@ export default function PageCategory() {
                 return category
             }            
         })
+        if (category1.length === 0){
+            return "Sem categoria"
+        }
         return category1[0].description        
     }
 
