@@ -1,6 +1,6 @@
 "use client"
 import Link from 'next/link'
-import { Home, List, Grid, CreditCard, DollarSign } from 'react-feather'
+import { Home, List, Grid, CreditCard, DollarSign, Activity, ShoppingBag } from 'react-feather'
 import { usePathname } from 'next/navigation'
 
 export default function Navbar() {
@@ -70,6 +70,24 @@ export default function Navbar() {
                             >
                                 <DollarSign size={18} className="me-1" />
                                 Transações
+                            </Link>
+                        </li>
+                        <li className="nav-item">
+                            <Link 
+                                href="/financial-health" 
+                                className={`nav-link ${pathname === '/financial-health' ? 'active' : ''}`}
+                            >
+                                <Activity size={18} className="me-1" />
+                                Saúde Financeira
+                            </Link>
+                        </li>
+                        <li className="nav-item">
+                            <Link 
+                                href="/wishlist" 
+                                className={`nav-link ${pathname === '/wishlist' ? 'active' : ''}`}
+                            >
+                                <ShoppingBag size={18} className="me-1" />
+                                Lista de Desejos
                             </Link>
                         </li>
                     </ul>

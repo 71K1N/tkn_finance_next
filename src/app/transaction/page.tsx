@@ -1,6 +1,6 @@
 "use client"
 import { useEffect, useState } from "react";
-import { Trash2, Edit, DollarSign } from 'react-feather';
+import { Trash2, Edit, DollarSign, Search, Save, X, CreditCard, Calendar, Tag, List } from 'react-feather';
 import swal from 'sweetalert';
 
 interface Transaction {
@@ -236,17 +236,50 @@ export default function PageTransaction() {
     }, [])
 
     return (
-        <div>
-            <div className="row">
+        <div className="container-fluid py-4">
+            {/* Cabeçalho com Resumo */}
+            <div className="row mb-4">
                 <div className="col">
-                    <h2>Transações</h2>
+                    <h2 className="mb-0">Transações</h2>
+                    <p className="text-muted">Gerencie suas transações financeiras</p>
                 </div>
             </div>
-            <div className="card">
+
+            {/* Cards de Resumo */}
+            <div className="row mb-4">
+                <div className="col-md-4">
+                    <div className="card bg-primary text-white">
+                        <div className="card-body">
+                            <h6 className="card-title">Receitas</h6>
+                            <h3 className="mb-0">R$ {totalIncome.toFixed(2)}</h3>
+                        </div>
+                    </div>
+                </div>
+                <div className="col-md-4">
+                    <div className="card bg-danger text-white">
+                        <div className="card-body">
+                            <h6 className="card-title">Despesas</h6>
+                            <h3 className="mb-0">R$ {totalExpenses.toFixed(2)}</h3>
+                        </div>
+                    </div>
+                </div>
+                <div className="col-md-4">
+                    <div className="card bg-success text-white">
+                        <div className="card-body">
+                            <h6 className="card-title">Saldo</h6>
+                            <h3 className="mb-0">R$ {balance.toFixed(2)}</h3>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {/* Formulário */}
+            <div className="card shadow-sm mb-4">
                 <div className="card-body">
-                    <div className="row">
+                    <h5 className="card-title mb-4">Nova Transação</h5>
+                    <div className="row g-3">
                         <div className="col-md-6">
-                            <div className="form-floating mb-3">
+                            <div className="form-floating">
                                 <input 
                                     type="text" 
                                     className="form-control" 
@@ -259,7 +292,7 @@ export default function PageTransaction() {
                             </div>
                         </div>
                         <div className="col-md-6">
-                            <div className="form-floating mb-3">
+                            <div className="form-floating">
                                 <input 
                                     type="text" 
                                     className="form-control" 
@@ -273,9 +306,9 @@ export default function PageTransaction() {
                         </div>
                     </div>
 
-                    <div className="row">
+                    <div className="row g-3 mt-2">
                         <div className="col-md-3">
-                            <div className="form-floating mb-3">
+                            <div className="form-floating">
                                 <input 
                                     type="text" 
                                     className="form-control" 
@@ -291,7 +324,7 @@ export default function PageTransaction() {
                             </div>
                         </div>
                         <div className="col-md-3">
-                            <div className="form-floating mb-3">
+                            <div className="form-floating">
                                 <input 
                                     type="date" 
                                     className="form-control" 
@@ -302,13 +335,8 @@ export default function PageTransaction() {
                                 <label htmlFor="dueDate">Data Vencimento</label>
                             </div>
                         </div>
-                    </div>
-
-                    <div className="row mb-3">                       
-                        
-                        {/* Alternativa com Radio Buttons para melhor UX */}
-                        <div className="col-md-8">
-                            <div className="mt-2">
+                        <div className="col-md-6">
+                            <div className="d-flex align-items-center h-100">
                                 <div className="form-check form-check-inline">
                                     <input
                                         className="form-check-input"
@@ -341,9 +369,9 @@ export default function PageTransaction() {
                         </div>
                     </div>
 
-                    <div className="row">
+                    <div className="row g-3 mt-2">
                         <div className="col-md-4">
-                            <div className="form-floating mb-3">
+                            <div className="form-floating">
                                 <select 
                                     className="form-select" 
                                     value={accountId} 
@@ -360,7 +388,7 @@ export default function PageTransaction() {
                             </div>
                         </div>
                         <div className="col-md-4">
-                            <div className="form-floating mb-3">
+                            <div className="form-floating">
                                 <select 
                                     className="form-select" 
                                     value={categoryId} 
@@ -377,7 +405,7 @@ export default function PageTransaction() {
                             </div>
                         </div>
                         <div className="col-md-4">
-                            <div className="form-floating mb-3">
+                            <div className="form-floating">
                                 <select 
                                     className="form-select" 
                                     value={subCategoryId} 
@@ -397,67 +425,127 @@ export default function PageTransaction() {
                         </div>
                     </div>
 
-                    <div className="row mt-2">
-                        <div className="col-md-6">
-                            <button className="btn btn-warning" onClick={handleSubmit}>Salvar</button>
-                            <button className="btn btn-danger mx-2" onClick={clearForm}>Cancelar</button>
+                    <div className="row mt-4">
+                        <div className="col">
+                            <button 
+                                className="btn btn-primary me-2" 
+                                onClick={handleSubmit}
+                            >
+                                <Save size={16} className="me-1" />
+                                {id > 0 ? 'Atualizar' : 'Salvar'}
+                            </button>
+                            <button 
+                                className="btn btn-outline-secondary" 
+                                onClick={clearForm}
+                            >
+                                <X size={16} className="me-1" />
+                                Cancelar
+                            </button>
                         </div>
                     </div>
-                    <div className="row">
-                        <div className="col-md-12">
-                            <table className="table mt-4">
-                                <thead className="table-dark">
-                                    <tr>
-                                        <th>Descrição</th>
-                                        <th>Categoria</th>
-                                        <th>Subcategoria</th>
-                                        <th>Valor</th>
-                                        <th>Vencimento</th>
-                                        <th>Status</th>
-                                        <th>Tipo</th>
-                                        <th>Ações</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {transactions.map(item => (
-                                        <tr key={item.id} className={item.payment_date ? 'table-success' : ''}>
-                                            <td>{item.name}</td>
-                                            <td>{getCategoryName(item.category_id)}</td>
-                                            <td>{getSubCategoryName(item.subcategory_id)}</td>
-                                            <td>R$ {item.amount.toFixed(2)}</td>
-                                            <td>{new Date(item.due_date).toLocaleDateString()}</td>
-                                            <td>
-                                                {item.payment_date ? (
-                                                    <span className="badge bg-success">Pago</span>
-                                                ) : (
-                                                    <span className="badge bg-warning">Pendente</span>
-                                                )}
-                                            </td>
-                                            <td>{item.type === 'EXPENSE' ? 'Despesa' : 'Receita'}</td>
-                                            <td>
-                                                <div className="btn-group" role="group">
-                                                    {!item.payment_date && (
-                                                        <button 
-                                                            className="btn btn-outline-success" 
-                                                            onClick={() => handleOpenPaymentModal(item)}
-                                                            title="Registrar Pagamento"
-                                                        >
-                                                            <DollarSign size={18} />
-                                                        </button>
-                                                    )}
-                                                    <button className="btn btn-outline-secondary" onClick={() => edit(item)}>
-                                                        <Edit size={18} />
-                                                    </button>
-                                                    <button className="btn btn-outline-secondary" onClick={() => remove(item.id)}>
-                                                        <Trash2 size={18} />
-                                                    </button>
-                                                </div>
-                                            </td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
+                </div>
+            </div>
+
+            {/* Lista de Transações */}
+            <div className="card shadow-sm">
+                <div className="card-body">
+                    <div className="row mb-3">
+                        <div className="col">
+                            <div className="input-group">
+                                <span className="input-group-text">
+                                    <Search size={16} />
+                                </span>
+                                <input 
+                                    type="text" 
+                                    className="form-control" 
+                                    placeholder="Buscar transações..." 
+                                />
+                            </div>
                         </div>
+                    </div>
+
+                    <div className="table-responsive">
+                        <table className="table table-hover">
+                            <thead className="table-light">
+                                <tr>
+                                    <th>Descrição</th>
+                                    <th>Categoria</th>
+                                    <th>Subcategoria</th>
+                                    <th>Valor</th>
+                                    <th>Vencimento</th>
+                                    <th>Status</th>
+                                    <th>Tipo</th>
+                                    <th className="text-end">Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {transactions.map(item => (
+                                    <tr key={item.id} className={item.payment_date ? 'table-success' : ''}>
+                                        <td>
+                                            <div className="d-flex align-items-center">
+                                                <List size={16} className="me-2 text-primary" />
+                                                {item.name}
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <div className="d-flex align-items-center">
+                                                <Tag size={16} className="me-2 text-secondary" />
+                                                {getCategoryName(item.category_id)}
+                                            </div>
+                                        </td>
+                                        <td>{getSubCategoryName(item.subcategory_id)}</td>
+                                        <td className={item.type === 'EXPENSE' ? 'text-danger' : 'text-success'}>
+                                            R$ {item.amount.toFixed(2)}
+                                        </td>
+                                        <td>
+                                            <div className="d-flex align-items-center">
+                                                <Calendar size={16} className="me-2 text-secondary" />
+                                                {new Date(item.due_date).toLocaleDateString()}
+                                            </div>
+                                        </td>
+                                        <td>
+                                            {item.payment_date ? (
+                                                <span className="badge bg-success">Pago</span>
+                                            ) : (
+                                                <span className="badge bg-warning">Pendente</span>
+                                            )}
+                                        </td>
+                                        <td>
+                                            <span className={`badge ${item.type === 'EXPENSE' ? 'bg-danger' : 'bg-success'}`}>
+                                                {item.type === 'EXPENSE' ? 'Despesa' : 'Receita'}
+                                            </span>
+                                        </td>
+                                        <td className="text-end">
+                                            <div className="btn-group" role="group">
+                                                {!item.payment_date && (
+                                                    <button 
+                                                        className="btn btn-outline-success btn-sm" 
+                                                        onClick={() => handleOpenPaymentModal(item)}
+                                                        title="Registrar Pagamento"
+                                                    >
+                                                        <DollarSign size={16} />
+                                                    </button>
+                                                )}
+                                                <button 
+                                                    className="btn btn-outline-primary btn-sm" 
+                                                    onClick={() => edit(item)}
+                                                    title="Editar"
+                                                >
+                                                    <Edit size={16} />
+                                                </button>
+                                                <button 
+                                                    className="btn btn-outline-danger btn-sm" 
+                                                    onClick={() => remove(item.id)}
+                                                    title="Excluir"
+                                                >
+                                                    <Trash2 size={16} />
+                                                </button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
                     </div>
                 </div>
             </div>
@@ -476,7 +564,6 @@ export default function PageTransaction() {
                                 ></button>
                             </div>
                             <div className="modal-body">
-                                {/* Novo: Informações da transação */}
                                 <div className="alert alert-info mb-3">
                                     <h6 className="mb-1">Transação: {selectedTransaction?.name}</h6>
                                     <div className="small">
@@ -510,7 +597,7 @@ export default function PageTransaction() {
                             <div className="modal-footer">
                                 <button 
                                     type="button" 
-                                    className="btn btn-secondary" 
+                                    className="btn btn-outline-secondary" 
                                     onClick={() => setShowPaymentModal(false)}
                                 >
                                     Cancelar
@@ -525,7 +612,7 @@ export default function PageTransaction() {
                             </div>
                         </div>
                     </div>
-                    {/* <div className="modal-backdrop show" style={{position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 1040}}></div> */}
+                    <div className="modal-backdrop show"></div>
                 </div>
             )}
         </div>
