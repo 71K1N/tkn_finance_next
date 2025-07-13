@@ -245,34 +245,6 @@ export default function PageTransaction() {
                 </div>
             </div>
 
-            {/* Cards de Resumo */}
-            <div className="row mb-4">
-                <div className="col-md-4">
-                    <div className="card bg-primary text-white">
-                        <div className="card-body">
-                            <h6 className="card-title">Receitas</h6>
-                            <h3 className="mb-0">R$ {totalIncome.toFixed(2)}</h3>
-                        </div>
-                    </div>
-                </div>
-                <div className="col-md-4">
-                    <div className="card bg-danger text-white">
-                        <div className="card-body">
-                            <h6 className="card-title">Despesas</h6>
-                            <h3 className="mb-0">R$ {totalExpenses.toFixed(2)}</h3>
-                        </div>
-                    </div>
-                </div>
-                <div className="col-md-4">
-                    <div className="card bg-success text-white">
-                        <div className="card-body">
-                            <h6 className="card-title">Saldo</h6>
-                            <h3 className="mb-0">R$ {balance.toFixed(2)}</h3>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
             {/* Formulário */}
             <div className="card shadow-sm mb-4">
                 <div className="card-body">
