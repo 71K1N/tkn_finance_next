@@ -1,5 +1,5 @@
 "use client"
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { Trash2, Edit, DollarSign, Search, Save, X, CreditCard, Calendar, Tag, List } from 'react-feather';
 import swal from 'sweetalert';
 
@@ -105,11 +105,12 @@ export default function PageTransaction() {
 
     async function update() {
         const transaction = { 
-            category_id: categoryId, 
-            subcategory_id: subCategoryId,
-            description, 
+            name,
+            description,
             amount,
             due_date: dueDate,
+            subcategory_id: subCategoryId,
+            account_id: accountId,
             type
         }
         let response = await fetch(`${apiUrl}/transaction/${id}`, {
@@ -117,6 +118,9 @@ export default function PageTransaction() {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(transaction)
         })
+        if (response.status === 200) {
+            swal("Atualizado!", "Transação atualizada com sucesso!", "success");
+        }
         clearForm();
         getAllTransactions();
     }
@@ -147,6 +151,7 @@ export default function PageTransaction() {
         setAmount(item.amount);
         setDueDate(item.due_date);
         setType(item.type);
+        setAccountId(item.account_id);
     }
 
     function clearForm() {
@@ -179,8 +184,23 @@ export default function PageTransaction() {
         return subCategory ? subCategory.name : "N/A";
     }
 
+    // Função para formatar datas corretamente (resolve problema de "dia antes")
+    function formatDate(dateString: string): string {
+        // Dividir a data em partes para evitar problemas de fuso horário
+        const [year, month, day] = dateString.split('-').map(Number);
+        const date = new Date(year, month - 1, day); // month - 1 porque Date usa 0-11 para meses
+        
+        return date.toLocaleDateString('pt-BR', {
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit'
+        });
+    }
+
+
+
     // Função para calcular totalizadores
-    function calculateTotals() {
+    const calculateTotals = useCallback(() => {
         const expenses = transactions
             .filter(t => t.type === 'EXPENSE')
             .reduce((acc, curr) => acc + curr.amount, 0)
@@ -192,7 +212,7 @@ export default function PageTransaction() {
         setTotalExpenses(expenses)
         setTotalIncome(income)
         setBalance(income - expenses)
-    }
+    }, [transactions])
 
     // Função para abrir modal de pagamento
     function handleOpenPaymentModal(transaction: Transaction) {
@@ -232,8 +252,12 @@ export default function PageTransaction() {
         getSubCategories();
         getAccounts();
         getAllTransactions();
-        calculateTotals();
     }, [])
+
+    // Efeito separado para calcular totais quando transactions mudar
+    useEffect(() => {
+        calculateTotals();
+    }, [calculateTotals])
 
     return (
         <div className="container-fluid py-4">
@@ -472,7 +496,7 @@ export default function PageTransaction() {
                                         <td>
                                             <div className="d-flex align-items-center">
                                                 <Calendar size={16} className="me-2 text-secondary" />
-                                                {new Date(item.due_date).toLocaleDateString()}
+                                                {formatDate(item.due_date)}
                                             </div>
                                         </td>
                                         <td>
@@ -541,7 +565,7 @@ export default function PageTransaction() {
                                     <div className="small">
                                         <strong>Valor Original:</strong> R$ {selectedTransaction?.amount.toFixed(2)}
                                         <br />
-                                        <strong>Vencimento:</strong> {new Date(selectedTransaction?.due_date || '').toLocaleDateString()}
+                                        <strong>Vencimento:</strong> {selectedTransaction?.due_date ? formatDate(selectedTransaction.due_date) : 'N/A'}
                                     </div>
                                 </div>
 
