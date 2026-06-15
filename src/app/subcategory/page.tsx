@@ -5,6 +5,10 @@ import swal from 'sweetalert';
 
 export default function PageSubCategory() {
     const apiUrl = "http://localhost:8081"
+    const authHeaders = {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer 1`,
+    };
     const [name, setName] = useState<string>("");
     const [description, setDescription] = useState<string>("");
     const [id, setId] = useState<number>(0);
@@ -19,8 +23,8 @@ export default function PageSubCategory() {
         setLoading(true);
         try {
             const [subcategoriesResponse, categoriesResponse] = await Promise.all([
-                fetch(apiUrl + '/subcategory', { method: "GET" }),
-                fetch(apiUrl + '/category', { method: "GET" })
+                fetch(apiUrl + '/subcategory', { method: "GET", headers: authHeaders }),
+                fetch(apiUrl + '/category', { method: "GET", headers: authHeaders })
             ]);
             
             const subcategoriesData = await subcategoriesResponse.json();
@@ -71,7 +75,7 @@ export default function PageSubCategory() {
             const subcategory = { name, description, categoryId: selectedCategory }
             await fetch(apiUrl + "/subcategory", {
                 method: "POST", 
-                headers: {'Content-Type': 'application/json'}, 
+                headers: authHeaders, 
                 body: JSON.stringify(subcategory)
             });
             swal("Sucesso!", "Subcategoria criada com sucesso!", "success");
@@ -90,7 +94,7 @@ export default function PageSubCategory() {
             const subcategory = { name, description, categoryId: selectedCategory }
             await fetch(`${apiUrl}/subcategory/${id}`, {
                 method: "PATCH", 
-                headers: {'Content-Type': 'application/json'}, 
+                headers: authHeaders, 
                 body: JSON.stringify(subcategory)
             });
             swal("Sucesso!", "Subcategoria atualizada com sucesso!", "success");
@@ -114,7 +118,10 @@ export default function PageSubCategory() {
             if (willDelete) {
                 setLoading(true);
                 try {
-                    await fetch(`${apiUrl}/subcategory/${id}`, {method:'DELETE'});
+                    await fetch(`${apiUrl}/subcategory/${id}`, {
+                        method: 'DELETE',
+                        headers: authHeaders,
+                    });
                     swal("Sucesso!", "Subcategoria excluída com sucesso!", "success");
                     getAll();
                 } catch (error) {
