@@ -16,7 +16,7 @@ export default function PageCategory() {
     async function getAll() {
         setLoading(true);
         try {
-            let response = await fetch(apiUrl + '/category', { method: "GET" });
+            let response = await fetch(apiUrl + '/category', { method: "GET", headers: {'Content-Type': 'application/json', 'Authorization': `Bearer 1`} });
             const data = await response.json();
             setCategories(data);
         } catch (error) {
@@ -59,7 +59,7 @@ export default function PageCategory() {
             const category = { name, description }
             await fetch(apiUrl + "/category", {
                 method: "POST", 
-                headers: {'Content-Type': 'application/json'}, 
+                headers: {'Content-Type': 'application/json', 'Authorization': `Bearer 1`}, 
                 body: JSON.stringify(category)
             });
             swal("Sucesso!", "Categoria criada com sucesso!", "success");
@@ -78,7 +78,7 @@ export default function PageCategory() {
             const category = { name, description }
             await fetch(`${apiUrl}/category/${id}`, {
                 method: "PATCH", 
-                headers: {'Content-Type': 'application/json'}, 
+                headers: {'Content-Type': 'application/json', 'Authorization': `Bearer 1`}, 
                 body: JSON.stringify(category)
             });
             swal("Sucesso!", "Categoria atualizada com sucesso!", "success");
@@ -102,7 +102,7 @@ export default function PageCategory() {
             if (willDelete) {
                 setLoading(true);
                 try {
-                    await fetch(`${apiUrl}/category/${id}`, {method:'DELETE'});
+                    await fetch(`${apiUrl}/category/${id}`, {method:'DELETE', headers: {'Authorization': `Bearer 1`}});
                     swal("Sucesso!", "Categoria excluída com sucesso!", "success");
                     getAll();
                 } catch (error) {

@@ -15,8 +15,10 @@ interface Transaction {
     user_id: number;
     account_id: number;
     paid_amount: number;
-    type: 'EXPENSE' | 'INCOME';
+    type: TransactionType;
 }
+
+type TransactionType = 'EXPENSE' | 'INCOME';
 
 export default function PageTransaction() {
     const apiUrl = "http://localhost:8081"
@@ -30,7 +32,7 @@ export default function PageTransaction() {
     const [categoryId, setCategoryId] = useState<number>(0);
     const [subCategoryId, setSubCategoryId] = useState<number>(0);
     const [accountId, setAccountId] = useState<number>(0);
-    const [type, setType] = useState<'EXPENSE' | 'INCOME'>('EXPENSE');
+    const [type, setType] = useState<TransactionType>('EXPENSE');
     
     // Estados para dados relacionados
     const [categories, setCategories] = useState<any[]>([]);
@@ -51,22 +53,26 @@ export default function PageTransaction() {
 
     async function getAllTransactions() {
         let response = await fetch(apiUrl + '/transaction', { method: "GET" });
-        setTransactions(await response.json());
+        const data = await response.json();
+        setTransactions(Array.isArray(data) ? data : []);
     }
 
     async function getCategories() {
         let response = await fetch(apiUrl + '/category', { method: "GET" })
-        setCategories(await response.json());
+        const data = await response.json();
+        setCategories(Array.isArray(data) ? data : []);
     }
 
     async function getSubCategories() {
         let response = await fetch(apiUrl + '/subcategory', { method: "GET" });
-        setSubCategories(await response.json());
+        const data = await response.json();
+        setSubCategories(Array.isArray(data) ? data : []);
     }
 
     async function getAccounts() {
         let response = await fetch(apiUrl + '/bank-account', { method: "GET" });
-        setAccounts(await response.json());
+        const data = await response.json();
+        setAccounts(Array.isArray(data) ? data : []);
     }
 
     function handleSubmit() {
