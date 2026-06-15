@@ -22,6 +22,10 @@ type TransactionType = 'EXPENSE' | 'INCOME';
 
 export default function PageTransaction() {
     const apiUrl = "http://localhost:8081"
+    const authHeaders = {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer 1`,
+    };
 
     // Estados para o formulário
     const [id, setId] = useState<number>(0);
@@ -52,25 +56,25 @@ export default function PageTransaction() {
     const [modalPaidAmount, setModalPaidAmount] = useState(0);
 
     async function getAllTransactions() {
-        let response = await fetch(apiUrl + '/transaction', { method: "GET" });
+        let response = await fetch(apiUrl + '/transaction', { method: "GET", headers: authHeaders });
         const data = await response.json();
         setTransactions(Array.isArray(data) ? data : []);
     }
 
     async function getCategories() {
-        let response = await fetch(apiUrl + '/category', { method: "GET" })
+        let response = await fetch(apiUrl + '/category', { method: "GET", headers: authHeaders })
         const data = await response.json();
         setCategories(Array.isArray(data) ? data : []);
     }
 
     async function getSubCategories() {
-        let response = await fetch(apiUrl + '/subcategory', { method: "GET" });
+        let response = await fetch(apiUrl + '/subcategory', { method: "GET", headers: authHeaders });
         const data = await response.json();
         setSubCategories(Array.isArray(data) ? data : []);
     }
 
     async function getAccounts() {
-        let response = await fetch(apiUrl + '/bank-account', { method: "GET" });
+        let response = await fetch(apiUrl + '/bank-account', { method: "GET", headers: authHeaders });
         const data = await response.json();
         setAccounts(Array.isArray(data) ? data : []);
     }
@@ -96,7 +100,7 @@ export default function PageTransaction() {
 
         let response = await fetch(apiUrl + "/transaction", {
             method: "POST",
-            headers: { 'Content-Type': 'application/json' },
+            headers: authHeaders,
             body: JSON.stringify(transaction)
         });
 
@@ -121,7 +125,7 @@ export default function PageTransaction() {
         }
         let response = await fetch(`${apiUrl}/transaction/${id}`, {
             method: "PATCH",
-            headers: { 'Content-Type': 'application/json' },
+            headers: authHeaders,
             body: JSON.stringify(transaction)
         })
         if (response.status === 200) {
@@ -140,7 +144,7 @@ export default function PageTransaction() {
         })
         .then(willDelete => {
             if (willDelete) {
-                fetch(`${apiUrl}/transaction/${id}`, { method: 'DELETE' }).then(() => {
+                fetch(`${apiUrl}/transaction/${id}`, { method: 'DELETE', headers: authHeaders }).then(() => {
                     swal("Excluído!", "Transação excluída com sucesso!", "success");
                     getAllTransactions();
                 });

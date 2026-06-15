@@ -5,6 +5,10 @@ import swal from 'sweetalert';
 
 export default function PageAccount() {
     const apiUrl = "http://localhost:8081"
+    const authHeaders = {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer 1`,
+    };
     const [description, setDescription] = useState<string>("");
     const [id, setId] = useState<number>(0);
     const [balance, setBalance] = useState<number>(0);
@@ -16,7 +20,7 @@ export default function PageAccount() {
     async function getAll() {
         setLoading(true);
         try {
-            let response = await fetch(apiUrl + '/bank-account', { method: "GET" });
+            let response = await fetch(apiUrl + '/bank-account', { method: "GET", headers: authHeaders });
             const data = await response.json();
             setAccounts(data);
         } catch (error) {
@@ -59,7 +63,7 @@ export default function PageAccount() {
             const data = { description, balance }
             await fetch(apiUrl + "/bank-account", {
                 method: "POST", 
-                headers: {'Content-Type': 'application/json'}, 
+                headers: authHeaders, 
                 body: JSON.stringify(data)
             });
             swal("Sucesso!", "Conta criada com sucesso!", "success");
@@ -78,7 +82,7 @@ export default function PageAccount() {
             const data = { description, balance }
             await fetch(`${apiUrl}/bank-account/${id}`, {
                 method: "PATCH", 
-                headers: {'Content-Type': 'application/json'}, 
+                headers: authHeaders, 
                 body: JSON.stringify(data)
             });
             swal("Sucesso!", "Conta atualizada com sucesso!", "success");
@@ -102,7 +106,7 @@ export default function PageAccount() {
             if (willDelete) {
                 setLoading(true);
                 try {
-                    await fetch(`${apiUrl}/bank-account/${id}`, {method:'DELETE'});
+                    await fetch(`${apiUrl}/bank-account/${id}`, {method:'DELETE', headers: authHeaders});
                     swal("Sucesso!", "Conta excluída com sucesso!", "success");
                     getAll();
                 } catch (error) {
