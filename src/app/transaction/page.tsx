@@ -224,6 +224,11 @@ export default function PageTransaction() {
         setBalance(income - expenses)
     }, [transactions])
 
+    function closePaymentModal() {
+        setShowPaymentModal(false);
+        setSelectedTransaction(null);
+    }
+
     // Função para abrir modal de pagamento
     function handleOpenPaymentModal(transaction: Transaction) {
         setSelectedTransaction(transaction);
@@ -242,14 +247,14 @@ export default function PageTransaction() {
         };
 
         const response = await fetch(`${apiUrl}/transaction/${selectedTransaction.id}/payment`, {
-            method: 'PATCH',
-            headers: { 'Content-Type': 'application/json' },
+            method: 'POST',
+            headers: authHeaders,
             body: JSON.stringify(paymentData)
         });
 
-        if (response.status === 200) {
+        if (response.ok) {
             swal("Sucesso!", "Pagamento registrado com sucesso!", "success");
-            setShowPaymentModal(false);
+            closePaymentModal();
             getAllTransactions();
         } else {
             swal("Erro!", "Erro ao registrar pagamento!", "error");
@@ -558,15 +563,15 @@ export default function PageTransaction() {
 
             {/* Modal de Pagamento */}
             {showPaymentModal && (
-                <div className="modal show d-block" tabIndex={-1}>
-                    <div className="modal-dialog">
+                <div className="modal show d-block" tabIndex={-1} onClick={closePaymentModal}>
+                    <div className="modal-dialog" onClick={(e) => e.stopPropagation()}>
                         <div className="modal-content">
                             <div className="modal-header">
                                 <h5 className="modal-title">Registrar Pagamento</h5>
                                 <button 
                                     type="button" 
                                     className="btn-close" 
-                                    onClick={() => setShowPaymentModal(false)}
+                                    onClick={closePaymentModal}
                                 ></button>
                             </div>
                             <div className="modal-body">
@@ -618,7 +623,6 @@ export default function PageTransaction() {
                             </div>
                         </div>
                     </div>
-                    <div className="modal-backdrop show"></div>
                 </div>
             )}
         </div>
