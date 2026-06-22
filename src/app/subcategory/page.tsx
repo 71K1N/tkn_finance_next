@@ -11,11 +11,11 @@ export default function PageSubCategory() {
     };
     const [name, setName] = useState<string>("");
     const [description, setDescription] = useState<string>("");
-    const [id, setId] = useState<number>(0);
+    const [id, setId] = useState<string>("");
     const [loading, setLoading] = useState<boolean>(false);
     const [subcategories, setSubcategories] = useState<any[]>([]);
     const [categories, setCategories] = useState<any[]>([]);
-    const [selectedCategory, setSelectedCategory] = useState<number>(0);
+    const [selectedCategory, setSelectedCategory] = useState<string>("");
     const [searchTerm, setSearchTerm] = useState<string>("");
     const [errors, setErrors] = useState<{name?: string, description?: string, category?: string}>({});
 
@@ -47,7 +47,7 @@ export default function PageSubCategory() {
         if (!description.trim()) {
             newErrors.description = "Descrição é obrigatória";
         }
-        if (!selectedCategory) {
+        if (!selectedCategory.trim()) {
             newErrors.category = "Categoria é obrigatória";
         }
         setErrors(newErrors);
@@ -56,15 +56,15 @@ export default function PageSubCategory() {
 
     function handleSubmit() {
         if (!validateForm()) return;
-        
+
         swal({
             title: "Confirmar",
-            text: id > 0 ? "Deseja atualizar esta subcategoria?" : "Deseja criar uma nova subcategoria?",
+            text: id ? "Deseja atualizar esta subcategoria?" : "Deseja criar uma nova subcategoria?",
             icon: "question",
             buttons: ["Cancelar", "Confirmar"],
         }).then((willProceed) => {
             if (willProceed) {
-                id > 0 ? update() : store();
+                id ? update() : store();
             }
         });
     }
@@ -134,17 +134,17 @@ export default function PageSubCategory() {
     }
 
     function edit(item:any) {
-        setId(item.id);
+        setId(item.id.toString());
         setName(item.name);
         setDescription(item.description);
-        setSelectedCategory(item.categoryId);
+        setSelectedCategory(item.categoryId.toString());
     }
 
     function clearForm() {
-        setId(0);
+        setId("");
         setName("");
         setDescription("");
-        setSelectedCategory(0);
+        setSelectedCategory("");
         setErrors({});
     }
 
@@ -171,15 +171,15 @@ export default function PageSubCategory() {
                     <div className="row g-3">
                         <div className="col-md-4">
                             <div className="form-floating">
-                                <select 
+                                <select
                                     className={`form-select ${errors.category ? 'is-invalid' : ''}`}
                                     value={selectedCategory}
                                     onChange={(e) => {
-                                        setSelectedCategory(Number(e.target.value));
+                                        setSelectedCategory(e.target.value);
                                         if (errors.category) setErrors({...errors, category: undefined});
                                     }}
                                 >
-                                    <option value="0">Selecione uma categoria</option>
+                                    <option value="">Selecione uma categoria</option>
                                     {categories.map(category => (
                                         <option key={category.id} value={category.id}>
                                             {category.name}
@@ -227,13 +227,13 @@ export default function PageSubCategory() {
                     </div>
                     <div className="row mt-3">
                         <div className="col">
-                            <button 
-                                className="btn btn-primary me-2" 
+                            <button
+                                className="btn btn-primary me-2"
                                 onClick={handleSubmit}
                                 disabled={loading}
                             >
                                 <Save size={16} className="me-1" />
-                                {id > 0 ? 'Atualizar' : 'Salvar'}
+                                {id ? 'Atualizar' : 'Salvar'}
                             </button>
                             <button 
                                 className="btn btn-outline-secondary" 
