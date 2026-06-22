@@ -10,7 +10,7 @@ export default function PageAccount() {
         'Authorization': `Bearer 1`,
     };
     const [description, setDescription] = useState<string>("");
-    const [id, setId] = useState<number>(0);
+    const [id, setId] = useState<string>("");
     const [balance, setBalance] = useState<number>(0);
     const [loading, setLoading] = useState<boolean>(false);
     const [accounts, setAccounts] = useState<any[]>([]);
@@ -47,12 +47,12 @@ export default function PageAccount() {
         
         swal({
             title: "Confirmar",
-            text: id > 0 ? "Deseja atualizar esta conta?" : "Deseja criar uma nova conta?",
+            text: id ? "Deseja atualizar esta conta?" : "Deseja criar uma nova conta?",
             icon: "question",
             buttons: ["Cancelar", "Confirmar"],
         }).then((willProceed) => {
             if (willProceed) {
-                id > 0 ? update() : store();
+                id ? update() : store();
             }
         });
     }
@@ -95,7 +95,7 @@ export default function PageAccount() {
         }
     }
 
-    async function remove(id:number) {
+    async function remove(id: string) {
         swal({
             title: "Confirmação",
             text: "Tem certeza que deseja excluir esta conta?",
@@ -125,7 +125,7 @@ export default function PageAccount() {
     }
 
     function clearForm() {
-        setId(0);
+        setId("");
         setDescription("");
         setBalance(0);
         setErrors({});
@@ -202,7 +202,7 @@ export default function PageAccount() {
                                 disabled={loading}
                             >
                                 <Save size={16} className="me-1" />
-                                {id > 0 ? 'Atualizar' : 'Salvar'}
+                                {id ? 'Atualizar' : 'Salvar'}
                             </button>
                             <button 
                                 className="btn btn-outline-secondary" 

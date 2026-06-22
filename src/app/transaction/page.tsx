@@ -4,16 +4,16 @@ import { Trash2, Edit, DollarSign, Search, Save, X, CreditCard, Calendar, Tag, L
 import swal from 'sweetalert';
 
 interface Transaction {
-    id?: number;
+    id?: string;
     name: string;
     description: string;
     amount: number;
     due_date: string;
     payment_date: string | null;
-    subcategory_id: number;
-    category_id: number;
+    subcategory_id: string;
+    category_id: string | null;
     user_id: number;
-    account_id: number;
+    account_id: string;
     paid_amount: number;
     type: TransactionType;
 }
@@ -28,14 +28,14 @@ export default function PageTransaction() {
     };
 
     // Estados para o formulário
-    const [id, setId] = useState<number>(0);
+    const [id, setId] = useState<string>("");
     const [name, setName] = useState<string>("");
     const [description, setDescription] = useState<string>("");
     const [amount, setAmount] = useState<number>(0);
     const [dueDate, setDueDate] = useState<string>("");
-    const [categoryId, setCategoryId] = useState<number>(0);
-    const [subCategoryId, setSubCategoryId] = useState<number>(0);
-    const [accountId, setAccountId] = useState<number>(0);
+    const [categoryId, setCategoryId] = useState<string>("");
+    const [subCategoryId, setSubCategoryId] = useState<string>("");
+    const [accountId, setAccountId] = useState<string>("");
     const [type, setType] = useState<TransactionType>('EXPENSE');
     
     // Estados para dados relacionados
@@ -80,7 +80,7 @@ export default function PageTransaction() {
     }
 
     function handleSubmit() {
-        id > 0 ? update() : store();
+        id ? update() : store();
     }
 
     async function store() {
@@ -98,10 +98,11 @@ export default function PageTransaction() {
             type
         }
 
+        const { category_id, ...payload } = transaction;
         let response = await fetch(apiUrl + "/transaction", {
             method: "POST",
             headers: authHeaders,
-            body: JSON.stringify(transaction)
+            body: JSON.stringify(payload)
         });
 
         if (response.status === 201) {
@@ -135,7 +136,7 @@ export default function PageTransaction() {
         getAllTransactions();
     }
 
-    async function remove(id: number | undefined) {
+    async function remove(id: string | undefined) {
         swal({
             title: "Confirmação",
             text: "Confirma a exclusão desta transação?",
@@ -153,11 +154,13 @@ export default function PageTransaction() {
     }
 
     function edit(item: Transaction) {
-        setId(item.id || 0);
+        setId(item.id || "");
         setName(item.name);
         setDescription(item.description);
-        setCategoryId(item.category_id);
         setSubCategoryId(item.subcategory_id);
+        // category_id is not stored by the API — derive it from the subcategory
+        const sub = subCategories.find((s: any) => s.id === item.subcategory_id);
+        setCategoryId(sub ? sub.categoryId : "");
         setAmount(item.amount);
         setDueDate(item.due_date);
         setType(item.type);
@@ -165,32 +168,35 @@ export default function PageTransaction() {
     }
 
     function clearForm() {
-        setId(0);
+        setId("");
         setName("");
         setDescription("");
         setAmount(0);
         setDueDate("");
-        setCategoryId(0);
-        setSubCategoryId(0);
-        setAccountId(0);
+        setCategoryId("");
+        setSubCategoryId("");
+        setAccountId("");
         setType('EXPENSE');
     }
 
     function handleCategorySelect(e: any) {
-        setCategoryId(Number(e.target.value));
+        setCategoryId(e.target.value);
     }
 
     function handleSubCategorySelect(e: any) {
-        setSubCategoryId(Number(e.target.value));
+        setSubCategoryId(e.target.value);
     }
 
-    function getCategoryName(id: number) {
-        const category = categories.find(cat => cat.id === id);
+    // category_id is not stored by the API; derive category name via the subcategory
+    function getCategoryName(subId: string) {
+        const sub = subCategories.find((s: any) => s.id === subId);
+        if (!sub) return "N/A";
+        const category = categories.find((c: any) => c.id === sub.categoryId);
         return category ? category.name : "N/A";
     }
 
-    function getSubCategoryName(id: number) {
-        const subCategory = subCategories.find(sub => sub.id === id);
+    function getSubCategoryName(id: string) {
+        const subCategory = subCategories.find((sub: any) => sub.id === id);
         return subCategory ? subCategory.name : "N/A";
     }
 
@@ -383,12 +389,12 @@ export default function PageTransaction() {
                     <div className="row g-3 mt-2">
                         <div className="col-md-4">
                             <div className="form-floating">
-                                <select 
-                                    className="form-select" 
-                                    value={accountId} 
-                                    onChange={(e) => setAccountId(Number(e.target.value))}
+                                <select
+                                    className="form-select"
+                                    value={accountId}
+                                    onChange={(e) => setAccountId(e.target.value)}
                                 >
-                                    <option value="0">Selecione...</option>
+                                    <option value="">Selecione...</option>
                                     {accounts.map(account => (
                                         <option key={account.id} value={account.id}>
                                             {account.description}
@@ -400,12 +406,12 @@ export default function PageTransaction() {
                         </div>
                         <div className="col-md-4">
                             <div className="form-floating">
-                                <select 
-                                    className="form-select" 
-                                    value={categoryId} 
-                                    onChange={(e) => setCategoryId(Number(e.target.value))}
+                                <select
+                                    className="form-select"
+                                    value={categoryId}
+                                    onChange={(e) => setCategoryId(e.target.value)}
                                 >
-                                    <option value="0">Selecione...</option>
+                                    <option value="">Selecione...</option>
                                     {categories.map(category => (
                                         <option key={category.id} value={category.id}>
                                             {category.name}
@@ -417,12 +423,12 @@ export default function PageTransaction() {
                         </div>
                         <div className="col-md-4">
                             <div className="form-floating">
-                                <select 
-                                    className="form-select" 
-                                    value={subCategoryId} 
-                                    onChange={(e) => setSubCategoryId(Number(e.target.value))}
+                                <select
+                                    className="form-select"
+                                    value={subCategoryId}
+                                    onChange={(e) => setSubCategoryId(e.target.value)}
                                 >
-                                    <option value="0">Selecione...</option>
+                                    <option value="">Selecione...</option>
                                     {subCategories
                                         .filter(sub => sub.categoryId === categoryId)
                                         .map(sub => (
@@ -443,7 +449,7 @@ export default function PageTransaction() {
                                 onClick={handleSubmit}
                             >
                                 <Save size={16} className="me-1" />
-                                {id > 0 ? 'Atualizar' : 'Salvar'}
+                                {id ? 'Atualizar' : 'Salvar'}
                             </button>
                             <button 
                                 className="btn btn-outline-secondary" 
@@ -501,7 +507,7 @@ export default function PageTransaction() {
                                         <td>
                                             <div className="d-flex align-items-center">
                                                 <Tag size={16} className="me-2 text-secondary" />
-                                                {getCategoryName(item.category_id)}
+                                                {getCategoryName(item.subcategory_id)}
                                             </div>
                                         </td>
                                         <td>{getSubCategoryName(item.subcategory_id)}</td>
