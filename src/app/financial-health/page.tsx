@@ -1,10 +1,10 @@
 "use client"
 import { useEffect, useState } from "react";
 import { CreditCard, TrendingUp, Save, ArrowDownCircle } from 'react-feather';
-import DashboardSummaryCard from "../components/dashboard/DashboardSummaryCard";
-import DashboardTrendChart, { TrendMonth } from "../components/dashboard/DashboardTrendChart";
-import UpcomingTransactionsCard, { UpcomingTransaction } from "../components/dashboard/UpcomingTransactionsCard";
-import AddTransactionAction from "../components/dashboard/AddTransactionAction";
+import DashboardSummaryCard from "@/components/dashboard/DashboardSummaryCard";
+import DashboardTrendChart, { TrendMonth } from "@/components/dashboard/DashboardTrendChart";
+import UpcomingTransactionsCard, { UpcomingTransaction } from "@/components/dashboard/UpcomingTransactionsCard";
+import AddTransactionAction from "@/components/dashboard/AddTransactionAction";
 
 interface Transaction {
     id?: number;

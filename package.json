@@ -9,6 +9,7 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@chakra-ui/react": "^3.36.0",
     "@types/recharts": "^1.8.29",
     "bootstrap": "^5.3.3",
     "lucide-react": "^0.511.0",
@@ -17,7 +18,8 @@
     "react-dom": "^18",
     "react-feather": "^2.0.10",
     "recharts": "^2.15.3",
-    "sweetalert": "^2.1.2"
+    "sweetalert": "^2.1.2",
+    "tikin-ds": "^0.0.3"
   },
   "devDependencies": {
     "@types/node": "^20",

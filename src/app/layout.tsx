@@ -1,11 +1,9 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
-import "bootstrap/dist/css/bootstrap.min.css";
-import "./core.css";
-import Navbar from "./components/navbar";
-import FloatingActionButton from './components/FloatingActionButton'
-import Link from "next/link";
-import { Activity, ShoppingBag } from "lucide-react";
+import Sidebar from "@/components/Sidebar";
+import FloatingActionButton from "@/components/FloatingActionButton"
+import Providers from "./providers";
+import { Box } from "@chakra-ui/react";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -22,11 +20,13 @@ export default function RootLayout({
   return (
     <html lang="pt-BR">
       <body className={inter.className}>
-        <Navbar/>
-        <div className="container">
-          {children}
-        </div>
-        <FloatingActionButton />
+        <Providers>
+          <Sidebar />
+          <Box className="container" bg="bg.canvas" ml={{ base: 0, md: "sidebar" }}>
+            {children}
+          </Box>
+          <FloatingActionButton />
+        </Providers>
       </body>
     </html>
   );
