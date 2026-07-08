@@ -1,7 +1,7 @@
 "use client"
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Activity, CreditCard, DollarSign, Grid, Home, List, Menu, ShoppingBag, X } from 'react-feather'
+import { Activity, CreditCard, DollarSign, Grid, Home, List, Menu, PieChart, ShoppingBag, Target, Users, X } from 'react-feather'
 import { Box, Drawer, Flex, IconButton, Text, useDisclosure } from '@chakra-ui/react'
 
 type NavItem = { href: string; label: string; icon: typeof Home }
@@ -21,6 +21,9 @@ const navSections: NavSection[] = [
             { href: '/category', label: 'Categorias', icon: List },
             { href: '/subcategory', label: 'Subcategorias', icon: Grid },
             { href: '/account', label: 'Contas', icon: CreditCard },
+            { href: '/budget', label: 'Orçamentos', icon: PieChart },
+            { href: '/savings-goal', label: 'Metas de Poupança', icon: Target },
+            { href: '/shared-expense-group', label: 'Despesas Compartilhadas', icon: Users },
         ],
     },
     {

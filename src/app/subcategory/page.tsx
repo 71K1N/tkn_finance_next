@@ -1,54 +1,51 @@
 "use client"
-import { useEffect, useState } from "react";
-import { Trash2, Edit, Search, Save, X } from 'react-feather';
+import { useEffect, useRef, useState } from "react";
+import { Edit, Trash2, Save, X } from 'react-feather';
 import swal from 'sweetalert';
+import { Button, DataTable, type DataTableColumn, type DataTableAction, type DataTableHandle } from "tikin-ds";
+import { Box, Card, Container, Field, Heading, Input, NativeSelect, SimpleGrid, Stack, Text } from "@chakra-ui/react";
+import { createSubcategory, getSubcategories, removeSubcategory, updateSubcategory } from "@/lib/api/subcategory";
+import { getCategories } from "@/lib/api/category";
+import type { Subcategory } from "@/lib/types/subcategory";
+import type { Category } from "@/lib/types/category";
 
-export default function PageSubCategory() {
-    const apiUrl = "http://localhost:8081"
-    const authHeaders = {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer 1`,
-    };
+export default function PageSubcategory() {
     const [name, setName] = useState<string>("");
     const [description, setDescription] = useState<string>("");
+    const [categoryId, setCategoryId] = useState<string>("");
     const [id, setId] = useState<string>("");
     const [loading, setLoading] = useState<boolean>(false);
-    const [subcategories, setSubcategories] = useState<any[]>([]);
-    const [categories, setCategories] = useState<any[]>([]);
-    const [selectedCategory, setSelectedCategory] = useState<string>("");
-    const [searchTerm, setSearchTerm] = useState<string>("");
-    const [errors, setErrors] = useState<{name?: string, description?: string, category?: string}>({});
+    const [categories, setCategories] = useState<Category[]>([]);
+    const [errors, setErrors] = useState<{name?: string, description?: string, categoryId?: string}>({});
+    const tableRef = useRef<DataTableHandle>(null);
 
-    async function getAll() {
-        setLoading(true);
+    async function loadCategories() {
         try {
-            const [subcategoriesResponse, categoriesResponse] = await Promise.all([
-                fetch(apiUrl + '/subcategory', { method: "GET", headers: authHeaders }),
-                fetch(apiUrl + '/category', { method: "GET", headers: authHeaders })
-            ]);
-            
-            const subcategoriesData = await subcategoriesResponse.json();
-            const categoriesData = await categoriesResponse.json();
-            
-            setSubcategories(subcategoriesData);
-            setCategories(categoriesData);
+            const response = await getCategories({ page: 1, pageSize: 100 });
+            setCategories(response.data);
         } catch (error) {
-            swal("Erro!", "Não foi possível carregar os dados", "error");
-        } finally {
-            setLoading(false);
+            swal("Erro!", "Não foi possível carregar as categorias", "error");
         }
     }
 
+    useEffect(() => {
+        loadCategories();
+    }, []);
+
+    function categoryName(id: string) {
+        return categories.find((category) => category.id === id)?.name ?? "Categoria não encontrada";
+    }
+
     function validateForm() {
-        const newErrors: {name?: string, description?: string, category?: string} = {};
+        const newErrors: {name?: string, description?: string, categoryId?: string} = {};
         if (!name.trim()) {
             newErrors.name = "Nome é obrigatório";
         }
         if (!description.trim()) {
             newErrors.description = "Descrição é obrigatória";
         }
-        if (!selectedCategory.trim()) {
-            newErrors.category = "Categoria é obrigatória";
+        if (!categoryId.trim()) {
+            newErrors.categoryId = "Categoria é obrigatória";
         }
         setErrors(newErrors);
         return Object.keys(newErrors).length === 0;
@@ -72,15 +69,10 @@ export default function PageSubCategory() {
     async function store() {
         setLoading(true);
         try {
-            const subcategory = { name, description, categoryId: selectedCategory }
-            await fetch(apiUrl + "/subcategory", {
-                method: "POST", 
-                headers: authHeaders, 
-                body: JSON.stringify(subcategory)
-            });
+            await createSubcategory({ name, description, categoryId });
             swal("Sucesso!", "Subcategoria criada com sucesso!", "success");
             clearForm();
-            getAll();
+            tableRef.current?.refetch();
         } catch (error) {
             swal("Erro!", "Não foi possível criar a subcategoria", "error");
         } finally {
@@ -91,15 +83,10 @@ export default function PageSubCategory() {
     async function update() {
         setLoading(true);
         try {
-            const subcategory = { name, description, categoryId: selectedCategory }
-            await fetch(`${apiUrl}/subcategory/${id}`, {
-                method: "PATCH", 
-                headers: authHeaders, 
-                body: JSON.stringify(subcategory)
-            });
+            await updateSubcategory(id, { name, description, categoryId });
             swal("Sucesso!", "Subcategoria atualizada com sucesso!", "success");
             clearForm();
-            getAll();
+            tableRef.current?.refetch();
         } catch (error) {
             swal("Erro!", "Não foi possível atualizar a subcategoria", "error");
         } finally {
@@ -107,7 +94,7 @@ export default function PageSubCategory() {
         }
     }
 
-    async function remove(id:number) {
+    async function remove(item: Subcategory) {
         swal({
             title: "Confirmação",
             text: "Tem certeza que deseja excluir esta subcategoria?",
@@ -118,12 +105,9 @@ export default function PageSubCategory() {
             if (willDelete) {
                 setLoading(true);
                 try {
-                    await fetch(`${apiUrl}/subcategory/${id}`, {
-                        method: 'DELETE',
-                        headers: authHeaders,
-                    });
+                    await removeSubcategory(item.id);
                     swal("Sucesso!", "Subcategoria excluída com sucesso!", "success");
-                    getAll();
+                    tableRef.current?.refetch();
                 } catch (error) {
                     swal("Erro!", "Não foi possível excluir a subcategoria", "error");
                 } finally {
@@ -133,199 +117,116 @@ export default function PageSubCategory() {
         });
     }
 
-    function edit(item:any) {
-        setId(item.id.toString());
+    function edit(item: Subcategory) {
+        setId(item.id);
         setName(item.name);
         setDescription(item.description);
-        setSelectedCategory(item.categoryId.toString());
+        setCategoryId(item.categoryId);
     }
 
     function clearForm() {
         setId("");
         setName("");
         setDescription("");
-        setSelectedCategory("");
+        setCategoryId("");
         setErrors({});
     }
 
-    const filteredSubcategories = subcategories.filter(subcategory => 
-        subcategory.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        subcategory.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        categories.find(cat => cat.id === subcategory.categoryId)?.name.toLowerCase().includes(searchTerm.toLowerCase())
-    );
+    const columns: DataTableColumn<Subcategory>[] = [
+        { key: "categoryId", header: "Categoria", render: (row) => categoryName(row.categoryId) },
+        { key: "name", header: "Nome", sortable: true },
+        { key: "description", header: "Descrição" },
+    ];
 
-    useEffect(() => {
-        getAll()
-    }, [])
-    
+    const actions: DataTableAction<Subcategory>[] = [
+        { label: "Editar", icon: <Edit size={16} />, onClick: edit },
+        { label: "Excluir", icon: <Trash2 size={16} />, variant: "danger", onClick: remove },
+    ];
+
     return (
-        <div className="container-fluid py-4">
-            <div className="row mb-4">
-                <div className="col">
-                    <h2 className="mb-0">Subcategorias</h2>
-                    <p className="text-muted">Gerencie suas subcategorias de forma simples e eficiente</p>
-                </div>
-            </div>
-            <div className="card shadow-sm">
-                <div className="card-body">
-                    <div className="row g-3">
-                        <div className="col-md-4">
-                            <div className="form-floating">
-                                <select
-                                    className={`form-select ${errors.category ? 'is-invalid' : ''}`}
-                                    value={selectedCategory}
+        <Container maxW="6xl" py={8}>
+            <Box mb={6}>
+                <Heading size="5xl">Subcategorias</Heading>
+                <Text color="fg.muted">Gerencie suas subcategorias de forma simples e eficiente</Text>
+            </Box>
+
+            <Card.Root mb={6}>
+                <Card.Body>
+                    <SimpleGrid columns={{ base: 1, md: 3 }} gap={4}>
+                        <Field.Root invalid={!!errors.categoryId}>
+                            <Field.Label>Categoria</Field.Label>
+                            <NativeSelect.Root>
+                                <NativeSelect.Field
+                                    value={categoryId}
                                     onChange={(e) => {
-                                        setSelectedCategory(e.target.value);
-                                        if (errors.category) setErrors({...errors, category: undefined});
+                                        setCategoryId(e.target.value);
+                                        if (errors.categoryId) setErrors({...errors, categoryId: undefined});
                                     }}
                                 >
                                     <option value="">Selecione uma categoria</option>
-                                    {categories.map(category => (
+                                    {categories.map((category) => (
                                         <option key={category.id} value={category.id}>
                                             {category.name}
                                         </option>
                                     ))}
-                                </select>
-                                <label>Categoria</label>
-                                {errors.category && <div className="invalid-feedback">{errors.category}</div>}
-                            </div>
-                        </div>
-                        <div className="col-md-4">
-                            <div className="form-floating">
-                                <input 
-                                    type="text" 
-                                    className={`form-control ${errors.name ? 'is-invalid' : ''}`}
-                                    id="floatingInput" 
-                                    placeholder="Digite um bom nome para sua subcategoria" 
-                                    value={name} 
-                                    onChange={(e) => { 
-                                        setName(e.target.value);
-                                        if (errors.name) setErrors({...errors, name: undefined});
-                                    }} 
-                                />
-                                <label htmlFor="floatingInput">Nome</label>
-                                {errors.name && <div className="invalid-feedback">{errors.name}</div>}
-                            </div>
-                        </div>
-                        <div className="col-md-4">
-                            <div className="form-floating">
-                                <input 
-                                    type="text" 
-                                    className={`form-control ${errors.description ? 'is-invalid' : ''}`}
-                                    id="description" 
-                                    placeholder="Digite uma descrição para sua subcategoria" 
-                                    value={description} 
-                                    onChange={e => { 
-                                        setDescription(e.target.value);
-                                        if (errors.description) setErrors({...errors, description: undefined});
-                                    }} 
-                                />
-                                <label htmlFor="description">Descrição</label>
-                                {errors.description && <div className="invalid-feedback">{errors.description}</div>}
-                            </div>
-                        </div>
-                    </div>
-                    <div className="row mt-3">
-                        <div className="col">
-                            <button
-                                className="btn btn-primary me-2"
-                                onClick={handleSubmit}
-                                disabled={loading}
-                            >
-                                <Save size={16} className="me-1" />
-                                {id ? 'Atualizar' : 'Salvar'}
-                            </button>
-                            <button 
-                                className="btn btn-outline-secondary" 
-                                onClick={clearForm}
-                                disabled={loading}
-                            >
-                                <X size={16} className="me-1" />
-                                Cancelar
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            </div>
+                                </NativeSelect.Field>
+                                <NativeSelect.Indicator />
+                            </NativeSelect.Root>
+                            {errors.categoryId && <Field.ErrorText>{errors.categoryId}</Field.ErrorText>}
+                        </Field.Root>
+                        <Field.Root invalid={!!errors.name}>
+                            <Field.Label>Nome</Field.Label>
+                            <Input
+                                placeholder="Digite um bom nome para sua subcategoria"
+                                value={name}
+                                onChange={(e) => {
+                                    setName(e.target.value);
+                                    if (errors.name) setErrors({...errors, name: undefined});
+                                }}
+                            />
+                            {errors.name && <Field.ErrorText>{errors.name}</Field.ErrorText>}
+                        </Field.Root>
+                        <Field.Root invalid={!!errors.description}>
+                            <Field.Label>Descrição</Field.Label>
+                            <Input
+                                placeholder="Digite uma descrição para sua subcategoria"
+                                value={description}
+                                onChange={(e) => {
+                                    setDescription(e.target.value);
+                                    if (errors.description) setErrors({...errors, description: undefined});
+                                }}
+                            />
+                            {errors.description && <Field.ErrorText>{errors.description}</Field.ErrorText>}
+                        </Field.Root>
+                    </SimpleGrid>
+                    <Stack direction="row" gap={2} mt={4}>
+                        <Button colorPalette="primary" onClick={handleSubmit} disabled={loading}>
+                            <Save size={16} />
+                            {id ? 'Atualizar' : 'Salvar'}
+                        </Button>
+                        <Button variant="outline" onClick={clearForm} disabled={loading}>
+                            <X size={16} />
+                            Cancelar
+                        </Button>
+                    </Stack>
+                </Card.Body>
+            </Card.Root>
 
-            <div className="card shadow-sm mt-4">
-                <div className="card-body">
-                    <div className="row mb-3">
-                        <div className="col">
-                            <div className="input-group">
-                                <span className="input-group-text">
-                                    <Search size={16} />
-                                </span>
-                                <input 
-                                    type="text" 
-                                    className="form-control" 
-                                    placeholder="Buscar subcategorias..." 
-                                    value={searchTerm}
-                                    onChange={(e) => setSearchTerm(e.target.value)}
-                                />
-                            </div>
-                        </div>
-                    </div>
-
-                    <div className="table-responsive">
-                        <table className="table table-hover">
-                            <thead className="table-light">
-                                <tr>
-                                    <th>Categoria</th>
-                                    <th>Nome</th>
-                                    <th>Descrição</th>
-                                    <th className="text-end">Ações</th>
-                                </tr>
-                            </thead>
-                            <tbody>                                    
-                                {loading ? (
-                                    <tr>
-                                        <td colSpan={4} className="text-center py-4">
-                                            <div className="spinner-border text-primary" role="status">
-                                                <span className="visually-hidden">Carregando...</span>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                ) : filteredSubcategories.length === 0 ? (
-                                    <tr>
-                                        <td colSpan={4} className="text-center py-4">
-                                            Nenhuma subcategoria encontrada
-                                        </td>
-                                    </tr>
-                                ) : (
-                                    filteredSubcategories.map(item => (
-                                        <tr key={item.id}>
-                                            <td>
-                                                {categories.find(cat => cat.id === item.categoryId)?.name || 'Categoria não encontrada'}
-                                            </td>
-                                            <td>{item.name}</td>
-                                            <td>{item.description}</td>
-                                            <td className="text-end">
-                                                <div className="btn-group" role="group">
-                                                    <button 
-                                                        className="btn btn-outline-primary btn-sm" 
-                                                        onClick={() => edit(item)}
-                                                        title="Editar"
-                                                    >
-                                                        <Edit size={16} />
-                                                    </button>
-                                                    <button 
-                                                        className="btn btn-outline-danger btn-sm" 
-                                                        onClick={() => remove(item.id)}
-                                                        title="Excluir"
-                                                    >
-                                                        <Trash2 size={16} />
-                                                    </button>
-                                                </div>
-                                            </td>
-                                        </tr>
-                                    ))
-                                )}
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-        </div>
+            <Card.Root>
+                <Card.Body>
+                    <DataTable<Subcategory>
+                        ref={tableRef}
+                        columns={columns}
+                        actions={actions}
+                        rowKey={(row) => row.id}
+                        enableSearch
+                        searchPlaceholder="Buscar subcategorias..."
+                        emptyMessage="Nenhuma subcategoria encontrada"
+                        errorMessage="Não foi possível carregar as subcategorias"
+                        onDataLoading={getSubcategories}
+                    />
+                </Card.Body>
+            </Card.Root>
+        </Container>
     )
 }

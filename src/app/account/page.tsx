@@ -1,34 +1,26 @@
 "use client"
-import { useEffect, useState } from "react";
-import { Trash2, Edit, Search, Save, X, CreditCard } from 'react-feather';
+import { useRef, useState } from "react";
+import { CreditCard, Edit, Trash2, Save, X } from 'react-feather';
 import swal from 'sweetalert';
+import { Button, DataTable, type DataTableColumn, type DataTableAction, type DataTableHandle } from "tikin-ds";
+import { Box, Card, Container, Field, Heading, HStack, Input, SimpleGrid, Stack, Text } from "@chakra-ui/react";
+import { createBankAccount, getBankAccounts, removeBankAccount, updateBankAccount } from "@/lib/api/bank-account";
+import type { BankAccount } from "@/lib/types/bank-account";
+
+function formatCurrency(value: number) {
+    return new Intl.NumberFormat('pt-BR', {
+        style: 'currency',
+        currency: 'BRL'
+    }).format(value);
+}
 
 export default function PageAccount() {
-    const apiUrl = "http://localhost:8081"
-    const authHeaders = {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer 1`,
-    };
     const [description, setDescription] = useState<string>("");
-    const [id, setId] = useState<string>("");
     const [balance, setBalance] = useState<number>(0);
+    const [id, setId] = useState<string>("");
     const [loading, setLoading] = useState<boolean>(false);
-    const [accounts, setAccounts] = useState<any[]>([]);
-    const [searchTerm, setSearchTerm] = useState<string>("");
     const [errors, setErrors] = useState<{description?: string, balance?: string}>({});
-
-    async function getAll() {
-        setLoading(true);
-        try {
-            let response = await fetch(apiUrl + '/bank-account', { method: "GET", headers: authHeaders });
-            const data = await response.json();
-            setAccounts(data);
-        } catch (error) {
-            swal("Erro!", "Não foi possível carregar as contas", "error");
-        } finally {
-            setLoading(false);
-        }
-    }
+    const tableRef = useRef<DataTableHandle>(null);
 
     function validateForm() {
         const newErrors: {description?: string, balance?: string} = {};
@@ -44,7 +36,7 @@ export default function PageAccount() {
 
     function handleSubmit() {
         if (!validateForm()) return;
-        
+
         swal({
             title: "Confirmar",
             text: id ? "Deseja atualizar esta conta?" : "Deseja criar uma nova conta?",
@@ -60,15 +52,10 @@ export default function PageAccount() {
     async function store() {
         setLoading(true);
         try {
-            const data = { description, balance }
-            await fetch(apiUrl + "/bank-account", {
-                method: "POST", 
-                headers: authHeaders, 
-                body: JSON.stringify(data)
-            });
+            await createBankAccount({ description, balance });
             swal("Sucesso!", "Conta criada com sucesso!", "success");
             clearForm();
-            getAll();
+            tableRef.current?.refetch();
         } catch (error) {
             swal("Erro!", "Não foi possível criar a conta", "error");
         } finally {
@@ -79,15 +66,10 @@ export default function PageAccount() {
     async function update() {
         setLoading(true);
         try {
-            const data = { description, balance }
-            await fetch(`${apiUrl}/bank-account/${id}`, {
-                method: "PATCH", 
-                headers: authHeaders, 
-                body: JSON.stringify(data)
-            });
+            await updateBankAccount(id, { description, balance });
             swal("Sucesso!", "Conta atualizada com sucesso!", "success");
             clearForm();
-            getAll();
+            tableRef.current?.refetch();
         } catch (error) {
             swal("Erro!", "Não foi possível atualizar a conta", "error");
         } finally {
@@ -95,7 +77,7 @@ export default function PageAccount() {
         }
     }
 
-    async function remove(id: string) {
+    async function remove(item: BankAccount) {
         swal({
             title: "Confirmação",
             text: "Tem certeza que deseja excluir esta conta?",
@@ -106,9 +88,9 @@ export default function PageAccount() {
             if (willDelete) {
                 setLoading(true);
                 try {
-                    await fetch(`${apiUrl}/bank-account/${id}`, {method:'DELETE', headers: authHeaders});
+                    await removeBankAccount(item.id);
                     swal("Sucesso!", "Conta excluída com sucesso!", "success");
-                    getAll();
+                    tableRef.current?.refetch();
                 } catch (error) {
                     swal("Erro!", "Não foi possível excluir a conta", "error");
                 } finally {
@@ -118,7 +100,7 @@ export default function PageAccount() {
         });
     }
 
-    function edit(item:any) {
+    function edit(item: BankAccount) {
         setId(item.id);
         setDescription(item.description);
         setBalance(item.balance);
@@ -131,173 +113,100 @@ export default function PageAccount() {
         setErrors({});
     }
 
-    function formatCurrency(value: number) {
-        return new Intl.NumberFormat('pt-BR', {
-            style: 'currency',
-            currency: 'BRL'
-        }).format(value);
-    }
+    const columns: DataTableColumn<BankAccount>[] = [
+        {
+            key: "description",
+            header: "Descrição",
+            sortable: true,
+            render: (row) => (
+                <HStack gap={2}>
+                    <CreditCard size={16} />
+                    <Text>{row.description}</Text>
+                </HStack>
+            ),
+        },
+        {
+            key: "balance",
+            header: "Saldo",
+            sortable: true,
+            render: (row) => (
+                <Text color={row.balance >= 0 ? "green.solid" : "red.solid"}>
+                    {formatCurrency(row.balance)}
+                </Text>
+            ),
+        },
+    ];
 
-    const filteredAccounts = accounts.filter(account => 
-        account.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        formatCurrency(account.balance).includes(searchTerm)
-    );
+    const actions: DataTableAction<BankAccount>[] = [
+        { label: "Editar", icon: <Edit size={16} />, onClick: edit },
+        { label: "Excluir", icon: <Trash2 size={16} />, variant: "danger", onClick: remove },
+    ];
 
-    useEffect(() => {
-        getAll()
-    }, [])
-    
     return (
-        <div className="container-fluid py-4">
-            <div className="row mb-4">
-                <div className="col">
-                    <h2 className="mb-0">Contas Bancárias</h2>
-                    <p className="text-muted">Gerencie suas contas bancárias de forma simples e eficiente</p>
-                </div>
-            </div>
-            <div className="card shadow-sm">
-                <div className="card-body">
-                    <div className="row g-3">
-                        <div className="col-md-6">
-                            <div className="form-floating">
-                                <input 
-                                    type="text" 
-                                    className={`form-control ${errors.description ? 'is-invalid' : ''}`}
-                                    id="description" 
-                                    placeholder="Digite uma descrição para sua conta" 
-                                    value={description} 
-                                    onChange={e => { 
-                                        setDescription(e.target.value);
-                                        if (errors.description) setErrors({...errors, description: undefined});
-                                    }} 
-                                />
-                                <label htmlFor="description">Descrição</label>
-                                {errors.description && <div className="invalid-feedback">{errors.description}</div>}
-                            </div>
-                        </div>
-                        <div className="col-md-6">
-                            <div className="form-floating">
-                                <input 
-                                    type="number" 
-                                    step="0.01"
-                                    className={`form-control ${errors.balance ? 'is-invalid' : ''}`}
-                                    id="balance" 
-                                    placeholder="Digite o saldo da conta" 
-                                    value={balance || ''} 
-                                    onChange={e => { 
-                                        setBalance(Number(e.target.value));
-                                        if (errors.balance) setErrors({...errors, balance: undefined});
-                                    }} 
-                                />
-                                <label htmlFor="balance">Saldo</label>
-                                {errors.balance && <div className="invalid-feedback">{errors.balance}</div>}
-                            </div>
-                        </div>
-                    </div>
-                    <div className="row mt-3">
-                        <div className="col">
-                            <button 
-                                className="btn btn-primary me-2" 
-                                onClick={handleSubmit}
-                                disabled={loading}
-                            >
-                                <Save size={16} className="me-1" />
-                                {id ? 'Atualizar' : 'Salvar'}
-                            </button>
-                            <button 
-                                className="btn btn-outline-secondary" 
-                                onClick={clearForm}
-                                disabled={loading}
-                            >
-                                <X size={16} className="me-1" />
-                                Cancelar
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            </div>
+        <Container maxW="6xl" py={8}>
+            <Box mb={6}>
+                <Heading size="5xl">Contas Bancárias</Heading>
+                <Text color="fg.muted">Gerencie suas contas bancárias de forma simples e eficiente</Text>
+            </Box>
 
-            <div className="card shadow-sm mt-4">
-                <div className="card-body">
-                    <div className="row mb-3">
-                        <div className="col">
-                            <div className="input-group">
-                                <span className="input-group-text">
-                                    <Search size={16} />
-                                </span>
-                                <input 
-                                    type="text" 
-                                    className="form-control" 
-                                    placeholder="Buscar contas..." 
-                                    value={searchTerm}
-                                    onChange={(e) => setSearchTerm(e.target.value)}
-                                />
-                            </div>
-                        </div>
-                    </div>
+            <Card.Root mb={6}>
+                <Card.Body>
+                    <SimpleGrid columns={{ base: 1, md: 2 }} gap={4}>
+                        <Field.Root invalid={!!errors.description}>
+                            <Field.Label>Descrição</Field.Label>
+                            <Input
+                                placeholder="Digite uma descrição para sua conta"
+                                value={description}
+                                onChange={(e) => {
+                                    setDescription(e.target.value);
+                                    if (errors.description) setErrors({...errors, description: undefined});
+                                }}
+                            />
+                            {errors.description && <Field.ErrorText>{errors.description}</Field.ErrorText>}
+                        </Field.Root>
+                        <Field.Root invalid={!!errors.balance}>
+                            <Field.Label>Saldo</Field.Label>
+                            <Input
+                                type="number"
+                                step="0.01"
+                                placeholder="Digite o saldo da conta"
+                                value={balance || ""}
+                                onChange={(e) => {
+                                    setBalance(Number(e.target.value));
+                                    if (errors.balance) setErrors({...errors, balance: undefined});
+                                }}
+                            />
+                            {errors.balance && <Field.ErrorText>{errors.balance}</Field.ErrorText>}
+                        </Field.Root>
+                    </SimpleGrid>
+                    <Stack direction="row" gap={2} mt={4}>
+                        <Button colorPalette="primary" onClick={handleSubmit} disabled={loading}>
+                            <Save size={16} />
+                            {id ? 'Atualizar' : 'Salvar'}
+                        </Button>
+                        <Button variant="outline" onClick={clearForm} disabled={loading}>
+                            <X size={16} />
+                            Cancelar
+                        </Button>
+                    </Stack>
+                </Card.Body>
+            </Card.Root>
 
-                    <div className="table-responsive">
-                        <table className="table table-hover">
-                            <thead className="table-light">
-                                <tr>
-                                    <th>Descrição</th>
-                                    <th>Saldo</th>
-                                    <th className="text-end">Ações</th>
-                                </tr>
-                            </thead>
-                            <tbody>                                    
-                                {loading ? (
-                                    <tr>
-                                        <td colSpan={3} className="text-center py-4">
-                                            <div className="spinner-border text-primary" role="status">
-                                                <span className="visually-hidden">Carregando...</span>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                ) : filteredAccounts.length === 0 ? (
-                                    <tr>
-                                        <td colSpan={3} className="text-center py-4">
-                                            Nenhuma conta encontrada
-                                        </td>
-                                    </tr>
-                                ) : (
-                                    filteredAccounts.map(item => (
-                                        <tr key={item.id}>
-                                            <td>
-                                                <div className="d-flex align-items-center">
-                                                    <CreditCard size={16} className="me-2 text-primary" />
-                                                    {item.description}
-                                                </div>
-                                            </td>
-                                            <td className={item.balance >= 0 ? 'text-success' : 'text-danger'}>
-                                                {formatCurrency(item.balance)}
-                                            </td>
-                                            <td className="text-end">
-                                                <div className="btn-group" role="group">
-                                                    <button 
-                                                        className="btn btn-outline-primary btn-sm" 
-                                                        onClick={() => edit(item)}
-                                                        title="Editar"
-                                                    >
-                                                        <Edit size={16} />
-                                                    </button>
-                                                    <button 
-                                                        className="btn btn-outline-danger btn-sm" 
-                                                        onClick={() => remove(item.id)}
-                                                        title="Excluir"
-                                                    >
-                                                        <Trash2 size={16} />
-                                                    </button>
-                                                </div>
-                                            </td>
-                                        </tr>
-                                    ))
-                                )}
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-        </div>
+            <Card.Root>
+                <Card.Body>
+                    <DataTable<BankAccount>
+                        ref={tableRef}
+                        columns={columns}
+                        actions={actions}
+                        rowKey={(row) => row.id}
+                        enableSearch
+                        searchPlaceholder="Buscar contas..."
+                        emptyMessage="Nenhuma conta encontrada"
+                        errorMessage="Não foi possível carregar as contas"
+                        onDataLoading={getBankAccounts}
+                    />
+                </Card.Body>
+            </Card.Root>
+        </Container>
     )
 }

@@ -1,170 +1,206 @@
 "use client"
-import { useEffect, useState, useCallback } from "react";
-import { Trash2, Edit, DollarSign, Search, Save, X, CreditCard, Calendar, Tag, List } from 'react-feather';
+import { useEffect, useRef, useState } from "react";
+import { Trash2, Edit, DollarSign, Save, X, List, Calendar, Tag } from 'react-feather';
 import swal from 'sweetalert';
+import { Button, DataTable, type DataTableColumn, type DataTableAction, type DataTableHandle } from "tikin-ds";
+import {
+    Badge,
+    Box,
+    Card,
+    Container,
+    Dialog,
+    Field,
+    HStack,
+    Heading,
+    Input,
+    NativeSelect,
+    Portal,
+    SimpleGrid,
+    Stack,
+    Text,
+} from "@chakra-ui/react";
+import { createTransaction, getTransactionSummary, getTransactions, payTransaction, removeTransaction, updateTransaction } from "@/lib/api/transaction";
+import { getCategories } from "@/lib/api/category";
+import { getSubcategories } from "@/lib/api/subcategory";
+import { getBankAccounts } from "@/lib/api/bank-account";
+import type { Transaction, TransactionSummary, TransactionType } from "@/lib/types/transaction";
+import type { Category } from "@/lib/types/category";
+import type { Subcategory } from "@/lib/types/subcategory";
+import type { BankAccount } from "@/lib/types/bank-account";
 
-interface Transaction {
-    id?: string;
-    name: string;
-    description: string;
-    amount: number;
-    due_date: string;
-    payment_date: string | null;
-    subcategory_id: string;
-    category_id: string | null;
-    user_id: number;
-    account_id: string;
-    paid_amount: number;
-    type: TransactionType;
+function formatCurrency(value: number) {
+    return new Intl.NumberFormat('pt-BR', {
+        style: 'currency',
+        currency: 'BRL',
+    }).format(value);
 }
 
-type TransactionType = 'EXPENSE' | 'INCOME';
+function formatDate(dateString: string | null): string {
+    if (!dateString) return "N/A";
+    const [year, month, day] = dateString.split('-').map(Number);
+    return new Date(year, month - 1, day).toLocaleDateString('pt-BR', {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+    });
+}
 
 export default function PageTransaction() {
-    const apiUrl = "http://localhost:8081"
-    const authHeaders = {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer 1`,
-    };
-
-    // Estados para o formulário
     const [id, setId] = useState<string>("");
     const [name, setName] = useState<string>("");
     const [description, setDescription] = useState<string>("");
     const [amount, setAmount] = useState<number>(0);
     const [dueDate, setDueDate] = useState<string>("");
     const [categoryId, setCategoryId] = useState<string>("");
-    const [subCategoryId, setSubCategoryId] = useState<string>("");
+    const [subcategoryId, setSubcategoryId] = useState<string>("");
     const [accountId, setAccountId] = useState<string>("");
     const [type, setType] = useState<TransactionType>('EXPENSE');
-    
-    // Estados para dados relacionados
-    const [categories, setCategories] = useState<any[]>([]);
-    const [subCategories, setSubCategories] = useState<any[]>([]);
-    const [accounts, setAccounts] = useState<any[]>([]);
-    const [transactions, setTransactions] = useState<Transaction[]>([]);
+    const [loading, setLoading] = useState<boolean>(false);
 
-    // Novos estados para totalizadores
-    const [totalExpenses, setTotalExpenses] = useState(0)
-    const [totalIncome, setTotalIncome] = useState(0)
-    const [balance, setBalance] = useState(0)
+    const [categories, setCategories] = useState<Category[]>([]);
+    const [subcategories, setSubcategories] = useState<Subcategory[]>([]);
+    const [accounts, setAccounts] = useState<BankAccount[]>([]);
+    const [summary, setSummary] = useState<TransactionSummary | null>(null);
 
-    // Estados para o modal de pagamento
-    const [showPaymentModal, setShowPaymentModal] = useState(false);
-    const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
-    const [modalPaymentDate, setModalPaymentDate] = useState("");
-    const [modalPaidAmount, setModalPaidAmount] = useState(0);
+    const [paymentTarget, setPaymentTarget] = useState<Transaction | null>(null);
+    const [paymentDate, setPaymentDate] = useState<string>("");
+    const [paidAmount, setPaidAmount] = useState<number>(0);
 
-    async function getAllTransactions() {
-        let response = await fetch(apiUrl + '/transaction', { method: "GET", headers: authHeaders });
-        const data = await response.json();
-        setTransactions(Array.isArray(data) ? data : []);
+    const tableRef = useRef<DataTableHandle>(null);
+
+    async function loadRelatedData() {
+        const [categoriesResponse, subcategoriesResponse, accountsResponse] = await Promise.all([
+            getCategories({ page: 1, pageSize: 100 }),
+            getSubcategories({ page: 1, pageSize: 100 }),
+            getBankAccounts({ page: 1, pageSize: 100 }),
+        ]);
+        setCategories(categoriesResponse.data);
+        setSubcategories(subcategoriesResponse.data);
+        setAccounts(accountsResponse.data);
     }
 
-    async function getCategories() {
-        let response = await fetch(apiUrl + '/category', { method: "GET", headers: authHeaders })
-        const data = await response.json();
-        setCategories(Array.isArray(data) ? data : []);
+    async function loadSummary() {
+        try {
+            setSummary(await getTransactionSummary());
+        } catch (error) {
+            // summary is a secondary indicator; failing to load it shouldn't block the page
+        }
     }
 
-    async function getSubCategories() {
-        let response = await fetch(apiUrl + '/subcategory', { method: "GET", headers: authHeaders });
-        const data = await response.json();
-        setSubCategories(Array.isArray(data) ? data : []);
+    useEffect(() => {
+        loadRelatedData();
+        loadSummary();
+    }, []);
+
+    function categoryName(subcategoryId: string | null) {
+        const sub = subcategories.find((s) => s.id === subcategoryId);
+        if (!sub) return "N/A";
+        return categories.find((c) => c.id === sub.categoryId)?.name ?? "N/A";
     }
 
-    async function getAccounts() {
-        let response = await fetch(apiUrl + '/bank-account', { method: "GET", headers: authHeaders });
-        const data = await response.json();
-        setAccounts(Array.isArray(data) ? data : []);
+    function subcategoryName(subcategoryId: string | null) {
+        return subcategories.find((s) => s.id === subcategoryId)?.name ?? "N/A";
+    }
+
+    function accountName(accountId: string) {
+        return accounts.find((a) => a.id === accountId)?.description ?? "N/A";
     }
 
     function handleSubmit() {
-        id ? update() : store();
+        swal({
+            title: "Confirmar",
+            text: id ? "Deseja atualizar esta transação?" : "Deseja criar uma nova transação?",
+            icon: "question",
+            buttons: ["Cancelar", "Confirmar"],
+        }).then((willProceed) => {
+            if (willProceed) {
+                id ? update() : store();
+            }
+        });
     }
 
     async function store() {
-        const transaction: Transaction = {
-            name,
-            description,
-            amount,
-            due_date: dueDate,
-            payment_date: null,
-            subcategory_id: subCategoryId,
-            category_id: categoryId,
-            user_id: 1, // Temporário - deve vir do contexto de autenticação
-            account_id: accountId,
-            paid_amount: amount,
-            type
-        }
-
-        const { category_id, ...payload } = transaction;
-        let response = await fetch(apiUrl + "/transaction", {
-            method: "POST",
-            headers: authHeaders,
-            body: JSON.stringify(payload)
-        });
-
-        if (response.status === 201) {
-            swal("Salvo!", "Transação adicionada com sucesso!", "success");
+        setLoading(true);
+        try {
+            await createTransaction({
+                name,
+                description,
+                amount,
+                due_date: dueDate,
+                subcategory_id: subcategoryId || undefined,
+                account_id: accountId,
+                type,
+                user_id: 1,
+            });
+            swal("Sucesso!", "Transação criada com sucesso!", "success");
             clearForm();
-            getAllTransactions();
-        } else {
-            swal("Erro!", "Erro ao salvar, verifique os dados!", "error");
+            tableRef.current?.refetch();
+            loadSummary();
+        } catch (error) {
+            swal("Erro!", "Não foi possível criar a transação", "error");
+        } finally {
+            setLoading(false);
         }
     }
 
     async function update() {
-        const transaction = { 
-            name,
-            description,
-            amount,
-            due_date: dueDate,
-            subcategory_id: subCategoryId,
-            account_id: accountId,
-            type
+        setLoading(true);
+        try {
+            await updateTransaction(id, {
+                name,
+                description,
+                amount,
+                due_date: dueDate,
+                subcategory_id: subcategoryId || undefined,
+                account_id: accountId,
+                type,
+            });
+            swal("Sucesso!", "Transação atualizada com sucesso!", "success");
+            clearForm();
+            tableRef.current?.refetch();
+            loadSummary();
+        } catch (error) {
+            swal("Erro!", "Não foi possível atualizar a transação", "error");
+        } finally {
+            setLoading(false);
         }
-        let response = await fetch(`${apiUrl}/transaction/${id}`, {
-            method: "PATCH",
-            headers: authHeaders,
-            body: JSON.stringify(transaction)
-        })
-        if (response.status === 200) {
-            swal("Atualizado!", "Transação atualizada com sucesso!", "success");
-        }
-        clearForm();
-        getAllTransactions();
     }
 
-    async function remove(id: string | undefined) {
+    async function remove(item: Transaction) {
         swal({
             title: "Confirmação",
-            text: "Confirma a exclusão desta transação?",
+            text: "Tem certeza que deseja excluir esta transação?",
             icon: "warning",
             dangerMode: true,
-        })
-        .then(willDelete => {
+            buttons: ["Cancelar", "Excluir"],
+        }).then(async (willDelete) => {
             if (willDelete) {
-                fetch(`${apiUrl}/transaction/${id}`, { method: 'DELETE', headers: authHeaders }).then(() => {
-                    swal("Excluído!", "Transação excluída com sucesso!", "success");
-                    getAllTransactions();
-                });
+                setLoading(true);
+                try {
+                    await removeTransaction(item.id);
+                    swal("Sucesso!", "Transação excluída com sucesso!", "success");
+                    tableRef.current?.refetch();
+                    loadSummary();
+                } catch (error) {
+                    swal("Erro!", "Não foi possível excluir a transação", "error");
+                } finally {
+                    setLoading(false);
+                }
             }
         });
     }
 
     function edit(item: Transaction) {
-        setId(item.id || "");
+        setId(item.id);
         setName(item.name);
         setDescription(item.description);
-        setSubCategoryId(item.subcategory_id);
-        // category_id is not stored by the API — derive it from the subcategory
-        const sub = subCategories.find((s: any) => s.id === item.subcategory_id);
-        setCategoryId(sub ? sub.categoryId : "");
         setAmount(item.amount);
-        setDueDate(item.due_date);
-        setType(item.type);
+        setDueDate(item.due_date ?? "");
+        setSubcategoryId(item.subcategory_id ?? "");
+        const sub = subcategories.find((s) => s.id === item.subcategory_id);
+        setCategoryId(sub?.categoryId ?? "");
         setAccountId(item.account_id);
+        setType(item.type);
     }
 
     function clearForm() {
@@ -174,463 +210,296 @@ export default function PageTransaction() {
         setAmount(0);
         setDueDate("");
         setCategoryId("");
-        setSubCategoryId("");
+        setSubcategoryId("");
         setAccountId("");
         setType('EXPENSE');
     }
 
-    function handleCategorySelect(e: any) {
-        setCategoryId(e.target.value);
+    function openPayment(item: Transaction) {
+        setPaymentTarget(item);
+        setPaidAmount(item.amount);
+        setPaymentDate(new Date().toISOString().split('T')[0]);
     }
 
-    function handleSubCategorySelect(e: any) {
-        setSubCategoryId(e.target.value);
-    }
-
-    // category_id is not stored by the API; derive category name via the subcategory
-    function getCategoryName(subId: string) {
-        const sub = subCategories.find((s: any) => s.id === subId);
-        if (!sub) return "N/A";
-        const category = categories.find((c: any) => c.id === sub.categoryId);
-        return category ? category.name : "N/A";
-    }
-
-    function getSubCategoryName(id: string) {
-        const subCategory = subCategories.find((sub: any) => sub.id === id);
-        return subCategory ? subCategory.name : "N/A";
-    }
-
-    // Função para formatar datas corretamente (resolve problema de "dia antes")
-    function formatDate(dateString: string): string {
-        // Dividir a data em partes para evitar problemas de fuso horário
-        const [year, month, day] = dateString.split('-').map(Number);
-        const date = new Date(year, month - 1, day); // month - 1 porque Date usa 0-11 para meses
-        
-        return date.toLocaleDateString('pt-BR', {
-            year: 'numeric',
-            month: '2-digit',
-            day: '2-digit'
-        });
-    }
-
-
-
-    // Função para calcular totalizadores
-    const calculateTotals = useCallback(() => {
-        const expenses = transactions
-            .filter(t => t.type === 'EXPENSE')
-            .reduce((acc, curr) => acc + curr.amount, 0)
-        
-        const income = transactions
-            .filter(t => t.type === 'INCOME')
-            .reduce((acc, curr) => acc + curr.amount, 0)
-        
-        setTotalExpenses(expenses)
-        setTotalIncome(income)
-        setBalance(income - expenses)
-    }, [transactions])
-
-    function closePaymentModal() {
-        setShowPaymentModal(false);
-        setSelectedTransaction(null);
-    }
-
-    // Função para abrir modal de pagamento
-    function handleOpenPaymentModal(transaction: Transaction) {
-        setSelectedTransaction(transaction);
-        setModalPaidAmount(transaction.amount);
-        setModalPaymentDate(new Date().toISOString().split('T')[0]);
-        setShowPaymentModal(true);
-    }
-
-    // Função para processar o pagamento
-    async function handlePayment() {
-        if (!selectedTransaction) return;
-
-        const paymentData = {
-            payment_date: modalPaymentDate,
-            paid_amount: modalPaidAmount
-        };
-
-        const response = await fetch(`${apiUrl}/transaction/${selectedTransaction.id}/payment`, {
-            method: 'POST',
-            headers: authHeaders,
-            body: JSON.stringify(paymentData)
-        });
-
-        if (response.ok) {
+    async function confirmPayment() {
+        if (!paymentTarget) return;
+        setLoading(true);
+        try {
+            await payTransaction(paymentTarget.id, { payment_date: paymentDate, paid_amount: paidAmount });
             swal("Sucesso!", "Pagamento registrado com sucesso!", "success");
-            closePaymentModal();
-            getAllTransactions();
-        } else {
-            swal("Erro!", "Erro ao registrar pagamento!", "error");
+            setPaymentTarget(null);
+            tableRef.current?.refetch();
+        } catch (error) {
+            swal("Erro!", "Não foi possível registrar o pagamento", "error");
+        } finally {
+            setLoading(false);
         }
     }
 
-    // Atualizar useEffect para incluir cálculo de totais quando transactions mudar
-    useEffect(() => {
-        getCategories();
-        getSubCategories();
-        getAccounts();
-        getAllTransactions();
-    }, [])
+    const columns: DataTableColumn<Transaction>[] = [
+        {
+            key: "name",
+            header: "Nome",
+            sortable: true,
+            render: (row) => (
+                <HStack gap={2}>
+                    <List size={16} />
+                    <Text>{row.name}</Text>
+                </HStack>
+            ),
+        },
+        {
+            key: "subcategory_id",
+            header: "Categoria",
+            render: (row) => (
+                <HStack gap={2}>
+                    <Tag size={16} />
+                    <Text>{categoryName(row.subcategory_id)} / {subcategoryName(row.subcategory_id)}</Text>
+                </HStack>
+            ),
+        },
+        {
+            key: "account_id",
+            header: "Conta",
+            render: (row) => accountName(row.account_id),
+        },
+        {
+            key: "amount",
+            header: "Valor",
+            sortable: true,
+            render: (row) => (
+                <Text color={row.type === 'EXPENSE' ? 'red.solid' : 'green.solid'}>
+                    R$ {row.amount.toFixed(2)}
+                </Text>
+            ),
+        },
+        {
+            key: "due_date",
+            header: "Vencimento",
+            sortable: true,
+            render: (row) => (
+                <HStack gap={2}>
+                    <Calendar size={16} />
+                    <Text>{formatDate(row.due_date)}</Text>
+                </HStack>
+            ),
+        },
+        {
+            key: "payment_date",
+            header: "Status",
+            render: (row) => (
+                <Badge colorPalette={row.payment_date ? "green" : "yellow"}>
+                    {row.payment_date ? "Pago" : "Pendente"}
+                </Badge>
+            ),
+        },
+        {
+            key: "type",
+            header: "Tipo",
+            filterable: true,
+            render: (row) => (
+                <Badge colorPalette={row.type === 'EXPENSE' ? "red" : "green"}>
+                    {row.type === 'EXPENSE' ? "Despesa" : "Receita"}
+                </Badge>
+            ),
+        },
+    ];
 
-    // Efeito separado para calcular totais quando transactions mudar
-    useEffect(() => {
-        calculateTotals();
-    }, [calculateTotals])
+    const actions: DataTableAction<Transaction>[] = [
+        {
+            label: "Registrar Pagamento",
+            icon: <DollarSign size={16} />,
+            isDisabled: (row) => !!row.payment_date,
+            onClick: openPayment,
+        },
+        { label: "Editar", icon: <Edit size={16} />, onClick: edit },
+        { label: "Excluir", icon: <Trash2 size={16} />, variant: "danger", onClick: remove },
+    ];
 
     return (
-        <div className="container-fluid py-4">
-            {/* Cabeçalho com Resumo */}
-            <div className="row mb-4">
-                <div className="col">
-                    <h2 className="mb-0">Transações</h2>
-                    <p className="text-muted">Gerencie suas transações financeiras</p>
-                </div>
-            </div>
+        <Container maxW="6xl" py={8}>
+            <Box mb={6}>
+                <Heading size="5xl">Transações</Heading>
+                <Text color="fg.muted">Gerencie suas transações financeiras</Text>
+            </Box>
 
-            {/* Formulário */}
-            <div className="card shadow-sm mb-4">
-                <div className="card-body">
-                    <h5 className="card-title mb-4">Nova Transação</h5>
-                    <div className="row g-3">
-                        <div className="col-md-6">
-                            <div className="form-floating">
-                                <input 
-                                    type="text" 
-                                    className="form-control" 
-                                    id="name" 
-                                    placeholder="Nome da transação"
-                                    value={name}
-                                    onChange={(e) => setName(e.target.value)}
-                                />
-                                <label htmlFor="name">Nome</label>
-                            </div>
-                        </div>
-                        <div className="col-md-6">
-                            <div className="form-floating">
-                                <input 
-                                    type="text" 
-                                    className="form-control" 
-                                    id="description" 
-                                    placeholder="Descrição"
-                                    value={description}
-                                    onChange={(e) => setDescription(e.target.value)}
-                                />
-                                <label htmlFor="description">Descrição</label>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div className="row g-3 mt-2">
-                        <div className="col-md-3">
-                            <div className="form-floating">
-                                <input 
-                                    type="text" 
-                                    className="form-control" 
-                                    id="amount" 
-                                    placeholder="Valor"
-                                    value={amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                                    onChange={(e) => {
-                                        const value = e.target.value.replace(/\D/g, '') 
-                                        setAmount(Number(value) / 100)
-                                    }}
-                                />
-                                <label htmlFor="amount">Valor</label>
-                            </div>
-                        </div>
-                        <div className="col-md-3">
-                            <div className="form-floating">
-                                <input 
-                                    type="date" 
-                                    className="form-control" 
-                                    id="dueDate"
-                                    value={dueDate}
-                                    onChange={(e) => setDueDate(e.target.value)}
-                                />
-                                <label htmlFor="dueDate">Data Vencimento</label>
-                            </div>
-                        </div>
-                        <div className="col-md-6">
-                            <div className="d-flex align-items-center h-100">
-                                <div className="form-check form-check-inline">
-                                    <input
-                                        className="form-check-input"
-                                        type="radio"
-                                        name="transactionType"
-                                        id="typeExpense"
-                                        value="EXPENSE"
-                                        checked={type === 'EXPENSE'}
-                                        onChange={(e) => setType(e.target.value as 'EXPENSE' | 'INCOME')}
-                                    />
-                                    <label className="form-check-label text-danger" htmlFor="typeExpense">
-                                        <span className="ms-1">Despesa</span>
-                                    </label>
-                                </div>
-                                <div className="form-check form-check-inline">
-                                    <input
-                                        className="form-check-input"
-                                        type="radio"
-                                        name="transactionType"
-                                        id="typeIncome"
-                                        value="INCOME"
-                                        checked={type === 'INCOME'}
-                                        onChange={(e) => setType(e.target.value as 'EXPENSE' | 'INCOME')}
-                                    />
-                                    <label className="form-check-label text-success" htmlFor="typeIncome">
-                                        <span className="ms-1">Receita</span>
-                                    </label>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div className="row g-3 mt-2">
-                        <div className="col-md-4">
-                            <div className="form-floating">
-                                <select
-                                    className="form-select"
-                                    value={accountId}
-                                    onChange={(e) => setAccountId(e.target.value)}
-                                >
-                                    <option value="">Selecione...</option>
-                                    {accounts.map(account => (
-                                        <option key={account.id} value={account.id}>
-                                            {account.description}
-                                        </option>
-                                    ))}
-                                </select>
-                                <label>Conta</label>
-                            </div>
-                        </div>
-                        <div className="col-md-4">
-                            <div className="form-floating">
-                                <select
-                                    className="form-select"
-                                    value={categoryId}
-                                    onChange={(e) => setCategoryId(e.target.value)}
-                                >
-                                    <option value="">Selecione...</option>
-                                    {categories.map(category => (
-                                        <option key={category.id} value={category.id}>
-                                            {category.name}
-                                        </option>
-                                    ))}
-                                </select>
-                                <label>Categoria</label>
-                            </div>
-                        </div>
-                        <div className="col-md-4">
-                            <div className="form-floating">
-                                <select
-                                    className="form-select"
-                                    value={subCategoryId}
-                                    onChange={(e) => setSubCategoryId(e.target.value)}
-                                >
-                                    <option value="">Selecione...</option>
-                                    {subCategories
-                                        .filter(sub => sub.categoryId === categoryId)
-                                        .map(sub => (
-                                            <option key={sub.id} value={sub.id}>
-                                                {sub.name}
-                                            </option>
-                                        ))}
-                                </select>
-                                <label>Subcategoria</label>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div className="row mt-4">
-                        <div className="col">
-                            <button 
-                                className="btn btn-primary me-2" 
-                                onClick={handleSubmit}
-                            >
-                                <Save size={16} className="me-1" />
-                                {id ? 'Atualizar' : 'Salvar'}
-                            </button>
-                            <button 
-                                className="btn btn-outline-secondary" 
-                                onClick={clearForm}
-                            >
-                                <X size={16} className="me-1" />
-                                Cancelar
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            {/* Lista de Transações */}
-            <div className="card shadow-sm">
-                <div className="card-body">
-                    <div className="row mb-3">
-                        <div className="col">
-                            <div className="input-group">
-                                <span className="input-group-text">
-                                    <Search size={16} />
-                                </span>
-                                <input 
-                                    type="text" 
-                                    className="form-control" 
-                                    placeholder="Buscar transações..." 
-                                />
-                            </div>
-                        </div>
-                    </div>
-
-                    <div className="table-responsive">
-                        <table className="table table-hover">
-                            <thead className="table-light">
-                                <tr>
-                                    <th>Descrição</th>
-                                    <th>Categoria</th>
-                                    <th>Subcategoria</th>
-                                    <th>Valor</th>
-                                    <th>Vencimento</th>
-                                    <th>Status</th>
-                                    <th>Tipo</th>
-                                    <th className="text-end">Ações</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {transactions.map(item => (
-                                    <tr key={item.id} className={item.payment_date ? 'table-success' : ''}>
-                                        <td>
-                                            <div className="d-flex align-items-center">
-                                                <List size={16} className="me-2 text-primary" />
-                                                {item.name}
-                                            </div>
-                                        </td>
-                                        <td>
-                                            <div className="d-flex align-items-center">
-                                                <Tag size={16} className="me-2 text-secondary" />
-                                                {getCategoryName(item.subcategory_id)}
-                                            </div>
-                                        </td>
-                                        <td>{getSubCategoryName(item.subcategory_id)}</td>
-                                        <td className={item.type === 'EXPENSE' ? 'text-danger' : 'text-success'}>
-                                            R$ {item.amount.toFixed(2)}
-                                        </td>
-                                        <td>
-                                            <div className="d-flex align-items-center">
-                                                <Calendar size={16} className="me-2 text-secondary" />
-                                                {formatDate(item.due_date)}
-                                            </div>
-                                        </td>
-                                        <td>
-                                            {item.payment_date ? (
-                                                <span className="badge bg-success">Pago</span>
-                                            ) : (
-                                                <span className="badge bg-warning">Pendente</span>
-                                            )}
-                                        </td>
-                                        <td>
-                                            <span className={`badge ${item.type === 'EXPENSE' ? 'bg-danger' : 'bg-success'}`}>
-                                                {item.type === 'EXPENSE' ? 'Despesa' : 'Receita'}
-                                            </span>
-                                        </td>
-                                        <td className="text-end">
-                                            <div className="btn-group" role="group">
-                                                {!item.payment_date && (
-                                                    <button 
-                                                        className="btn btn-outline-success btn-sm" 
-                                                        onClick={() => handleOpenPaymentModal(item)}
-                                                        title="Registrar Pagamento"
-                                                    >
-                                                        <DollarSign size={16} />
-                                                    </button>
-                                                )}
-                                                <button 
-                                                    className="btn btn-outline-primary btn-sm" 
-                                                    onClick={() => edit(item)}
-                                                    title="Editar"
-                                                >
-                                                    <Edit size={16} />
-                                                </button>
-                                                <button 
-                                                    className="btn btn-outline-danger btn-sm" 
-                                                    onClick={() => remove(item.id)}
-                                                    title="Excluir"
-                                                >
-                                                    <Trash2 size={16} />
-                                                </button>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-
-            {/* Modal de Pagamento */}
-            {showPaymentModal && (
-                <div className="modal show d-block" tabIndex={-1} onClick={closePaymentModal}>
-                    <div className="modal-dialog" onClick={(e) => e.stopPropagation()}>
-                        <div className="modal-content">
-                            <div className="modal-header">
-                                <h5 className="modal-title">Registrar Pagamento</h5>
-                                <button 
-                                    type="button" 
-                                    className="btn-close" 
-                                    onClick={closePaymentModal}
-                                ></button>
-                            </div>
-                            <div className="modal-body">
-                                <div className="alert alert-info mb-3">
-                                    <h6 className="mb-1">Transação: {selectedTransaction?.name}</h6>
-                                    <div className="small">
-                                        <strong>Valor Original:</strong> R$ {selectedTransaction?.amount.toFixed(2)}
-                                        <br />
-                                        <strong>Vencimento:</strong> {selectedTransaction?.due_date ? formatDate(selectedTransaction.due_date) : 'N/A'}
-                                    </div>
-                                </div>
-
-                                <div className="form-floating mb-3">
-                                    <input 
-                                        type="date" 
-                                        className="form-control" 
-                                        id="modalPaymentDate"
-                                        value={modalPaymentDate}
-                                        onChange={(e) => setModalPaymentDate(e.target.value)}
-                                    />
-                                    <label htmlFor="modalPaymentDate">Data do Pagamento</label>
-                                </div>
-                                <div className="form-floating mb-3">
-                                    <input 
-                                        type="number" 
-                                        className="form-control" 
-                                        id="modalPaidAmount"
-                                        value={modalPaidAmount}
-                                        onChange={(e) => setModalPaidAmount(Number(e.target.value))}
-                                    />
-                                    <label htmlFor="modalPaidAmount">Valor Pago</label>
-                                </div>
-                            </div>
-                            <div className="modal-footer">
-                                <button 
-                                    type="button" 
-                                    className="btn btn-outline-secondary" 
-                                    onClick={() => setShowPaymentModal(false)}
-                                >
-                                    Cancelar
-                                </button>
-                                <button 
-                                    type="button" 
-                                    className="btn btn-primary"
-                                    onClick={handlePayment}
-                                >
-                                    Confirmar Pagamento
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+            {summary && (
+                <SimpleGrid columns={{ base: 1, md: 3 }} gap={4} mb={6}>
+                    <Card.Root>
+                        <Card.Body>
+                            <Text color="fg.muted">Receitas</Text>
+                            <Text fontSize="2xl" color="green.solid">{formatCurrency(summary.totalIncome)}</Text>
+                        </Card.Body>
+                    </Card.Root>
+                    <Card.Root>
+                        <Card.Body>
+                            <Text color="fg.muted">Despesas</Text>
+                            <Text fontSize="2xl" color="red.solid">{formatCurrency(summary.totalExpenses)}</Text>
+                        </Card.Body>
+                    </Card.Root>
+                    <Card.Root>
+                        <Card.Body>
+                            <Text color="fg.muted">Saldo</Text>
+                            <Text fontSize="2xl" color={summary.balance >= 0 ? "green.solid" : "red.solid"}>
+                                {formatCurrency(summary.balance)}
+                            </Text>
+                        </Card.Body>
+                    </Card.Root>
+                </SimpleGrid>
             )}
-        </div>
+
+            <Card.Root mb={6}>
+                <Card.Body>
+                    <SimpleGrid columns={{ base: 1, md: 2 }} gap={4}>
+                        <Field.Root>
+                            <Field.Label>Nome</Field.Label>
+                            <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Nome da transação" />
+                        </Field.Root>
+                        <Field.Root>
+                            <Field.Label>Descrição</Field.Label>
+                            <Input value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Descrição" />
+                        </Field.Root>
+                    </SimpleGrid>
+
+                    <SimpleGrid columns={{ base: 1, md: 4 }} gap={4} mt={4}>
+                        <Field.Root>
+                            <Field.Label>Valor</Field.Label>
+                            <Input
+                                type="number"
+                                step="0.01"
+                                value={amount || ""}
+                                onChange={(e) => setAmount(Number(e.target.value))}
+                            />
+                        </Field.Root>
+                        <Field.Root>
+                            <Field.Label>Data Vencimento</Field.Label>
+                            <Input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} />
+                        </Field.Root>
+                        <Field.Root>
+                            <Field.Label>Tipo</Field.Label>
+                            <NativeSelect.Root>
+                                <NativeSelect.Field value={type} onChange={(e) => setType(e.target.value as TransactionType)}>
+                                    <option value="EXPENSE">Despesa</option>
+                                    <option value="INCOME">Receita</option>
+                                </NativeSelect.Field>
+                                <NativeSelect.Indicator />
+                            </NativeSelect.Root>
+                        </Field.Root>
+                        <Field.Root>
+                            <Field.Label>Conta</Field.Label>
+                            <NativeSelect.Root>
+                                <NativeSelect.Field value={accountId} onChange={(e) => setAccountId(e.target.value)}>
+                                    <option value="">Selecione...</option>
+                                    {accounts.map((account) => (
+                                        <option key={account.id} value={account.id}>{account.description}</option>
+                                    ))}
+                                </NativeSelect.Field>
+                                <NativeSelect.Indicator />
+                            </NativeSelect.Root>
+                        </Field.Root>
+                    </SimpleGrid>
+
+                    <SimpleGrid columns={{ base: 1, md: 2 }} gap={4} mt={4}>
+                        <Field.Root>
+                            <Field.Label>Categoria</Field.Label>
+                            <NativeSelect.Root>
+                                <NativeSelect.Field
+                                    value={categoryId}
+                                    onChange={(e) => {
+                                        setCategoryId(e.target.value);
+                                        setSubcategoryId("");
+                                    }}
+                                >
+                                    <option value="">Selecione...</option>
+                                    {categories.map((category) => (
+                                        <option key={category.id} value={category.id}>{category.name}</option>
+                                    ))}
+                                </NativeSelect.Field>
+                                <NativeSelect.Indicator />
+                            </NativeSelect.Root>
+                        </Field.Root>
+                        <Field.Root>
+                            <Field.Label>Subcategoria</Field.Label>
+                            <NativeSelect.Root>
+                                <NativeSelect.Field value={subcategoryId} onChange={(e) => setSubcategoryId(e.target.value)}>
+                                    <option value="">Selecione...</option>
+                                    {subcategories
+                                        .filter((sub) => sub.categoryId === categoryId)
+                                        .map((sub) => (
+                                            <option key={sub.id} value={sub.id}>{sub.name}</option>
+                                        ))}
+                                </NativeSelect.Field>
+                                <NativeSelect.Indicator />
+                            </NativeSelect.Root>
+                        </Field.Root>
+                    </SimpleGrid>
+
+                    <Stack direction="row" gap={2} mt={4}>
+                        <Button colorPalette="primary" onClick={handleSubmit} disabled={loading}>
+                            <Save size={16} />
+                            {id ? 'Atualizar' : 'Salvar'}
+                        </Button>
+                        <Button variant="outline" onClick={clearForm} disabled={loading}>
+                            <X size={16} />
+                            Cancelar
+                        </Button>
+                    </Stack>
+                </Card.Body>
+            </Card.Root>
+
+            <Card.Root>
+                <Card.Body>
+                    <DataTable<Transaction>
+                        ref={tableRef}
+                        columns={columns}
+                        actions={actions}
+                        rowKey={(row) => row.id}
+                        enableSearch
+                        searchPlaceholder="Buscar transações..."
+                        emptyMessage="Nenhuma transação encontrada"
+                        errorMessage="Não foi possível carregar as transações"
+                        onDataLoading={getTransactions}
+                    />
+                </Card.Body>
+            </Card.Root>
+
+            <Dialog.Root open={!!paymentTarget} onOpenChange={(e) => { if (!e.open) setPaymentTarget(null); }}>
+                <Portal>
+                    <Dialog.Backdrop />
+                    <Dialog.Positioner>
+                        <Dialog.Content>
+                            <Dialog.Header>
+                                <Dialog.Title>Registrar Pagamento</Dialog.Title>
+                            </Dialog.Header>
+                            <Dialog.Body>
+                                <Text mb={4}>
+                                    <strong>Transação:</strong> {paymentTarget?.name}<br />
+                                    <strong>Valor Original:</strong> R$ {paymentTarget?.amount.toFixed(2)}
+                                </Text>
+                                <Stack gap={4}>
+                                    <Field.Root>
+                                        <Field.Label>Data do Pagamento</Field.Label>
+                                        <Input type="date" value={paymentDate} onChange={(e) => setPaymentDate(e.target.value)} />
+                                    </Field.Root>
+                                    <Field.Root>
+                                        <Field.Label>Valor Pago</Field.Label>
+                                        <Input
+                                            type="number"
+                                            step="0.01"
+                                            value={paidAmount || ""}
+                                            onChange={(e) => setPaidAmount(Number(e.target.value))}
+                                        />
+                                    </Field.Root>
+                                </Stack>
+                            </Dialog.Body>
+                            <Dialog.Footer>
+                                <Button variant="outline" onClick={() => setPaymentTarget(null)} disabled={loading}>Cancelar</Button>
+                                <Button colorPalette="primary" onClick={confirmPayment} disabled={loading}>Confirmar Pagamento</Button>
+                            </Dialog.Footer>
+                        </Dialog.Content>
+                    </Dialog.Positioner>
+                </Portal>
+            </Dialog.Root>
+        </Container>
     )
 }
