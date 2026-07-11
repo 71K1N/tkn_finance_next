@@ -152,7 +152,7 @@ export default function PageSubcategory() {
 
             <Card.Root mb={6}>
                 <Card.Body>
-                    <SimpleGrid columns={{ base: 1, md: 3 }} gap={4}>
+                    <SimpleGrid columns={{ base: 1, md: 2, lg: 3 }} gap={4}>
                         <Field.Root invalid={!!errors.categoryId}>
                             <Field.Label>Categoria</Field.Label>
                             <NativeSelect.Root>
@@ -199,7 +199,7 @@ export default function PageSubcategory() {
                             {errors.description && <Field.ErrorText>{errors.description}</Field.ErrorText>}
                         </Field.Root>
                     </SimpleGrid>
-                    <Stack direction="row" gap={2} mt={4}>
+                    <Stack direction="row" gap={2} mt={4} wrap="wrap">
                         <Button colorPalette="primary" onClick={handleSubmit} disabled={loading}>
                             <Save size={16} />
                             {id ? 'Atualizar' : 'Salvar'}

@@ -2,6 +2,7 @@
 import {
     BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer
 } from 'recharts';
+import { Badge, Box, Card, Flex, Heading, Text } from "@chakra-ui/react";
 
 export interface TrendMonth {
     month: string;
@@ -17,18 +18,18 @@ interface DashboardTrendChartProps {
 
 export default function DashboardTrendChart({ data, formatCurrency, rangeLabel }: DashboardTrendChartProps) {
     return (
-        <div className="card border-0 shadow-sm h-100">
-            <div className="card-body">
-                <div className="d-flex justify-content-between align-items-center mb-4">
-                    <h5 className="card-title mb-0">Histórico dos Últimos 3 Meses</h5>
-                    {rangeLabel && <span className="badge bg-secondary">{rangeLabel}</span>}
-                </div>
+        <Card.Root h="full">
+            <Card.Body>
+                <Flex justify="space-between" align="center" mb={4}>
+                    <Heading size="md">Histórico dos Últimos 3 Meses</Heading>
+                    {rangeLabel && <Badge>{rangeLabel}</Badge>}
+                </Flex>
                 {data.length === 0 ? (
-                    <div className="d-flex align-items-center justify-content-center" style={{ height: 260 }}>
-                        <p className="text-muted mb-0">Sem dados históricos disponíveis.</p>
-                    </div>
+                    <Flex align="center" justify="center" h="260px">
+                        <Text color="fg.muted">Sem dados históricos disponíveis.</Text>
+                    </Flex>
                 ) : (
-                    <div style={{ width: '100%', height: 260 }}>
+                    <Box w="full" h="260px">
                         <ResponsiveContainer>
                             <BarChart data={data}>
                                 <CartesianGrid strokeDasharray="3 3" />
@@ -40,9 +41,9 @@ export default function DashboardTrendChart({ data, formatCurrency, rangeLabel }
                                 <Bar dataKey="expenses" name="Saídas" fill="#FF8042" />
                             </BarChart>
                         </ResponsiveContainer>
-                    </div>
+                    </Box>
                 )}
-            </div>
-        </div>
+            </Card.Body>
+        </Card.Root>
     );
 }

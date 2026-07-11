@@ -4,7 +4,8 @@ import { useRouter } from "next/navigation";
 import { ExternalLink, Save, X, Archive } from 'react-feather';
 import swal from 'sweetalert';
 import { Button, DataTable, type DataTableColumn, type DataTableAction, type DataTableHandle } from "tikin-ds";
-import { Badge, Box, Card, Container, Field, Heading, Input, SimpleGrid, Stack, Text } from "@chakra-ui/react";
+import { Box, Card, Container, Field, Heading, Input, SimpleGrid, Stack, Text } from "@chakra-ui/react";
+import StatusBadge from "@/components/StatusBadge";
 import { archiveExpenseGroup, createExpenseGroup, getExpenseGroups } from "@/lib/api/shared-expense-group";
 import type { ExpenseGroup } from "@/lib/types/shared-expense-group";
 
@@ -83,9 +84,9 @@ export default function PageSharedExpenseGroup() {
             key: "is_active",
             header: "Status",
             render: (row) => (
-                <Badge colorPalette={row.is_active ? "green" : "gray"}>
+                <StatusBadge status={row.is_active ? "success" : "neutral"}>
                     {row.is_active ? "Ativo" : "Arquivado"}
-                </Badge>
+                </StatusBadge>
             ),
         },
     ];
@@ -126,7 +127,7 @@ export default function PageSharedExpenseGroup() {
                             />
                         </Field.Root>
                     </SimpleGrid>
-                    <Stack direction="row" gap={2} mt={4}>
+                    <Stack direction="row" gap={2} mt={4} wrap="wrap">
                         <Button colorPalette="primary" onClick={store} disabled={loading}>
                             <Save size={16} />
                             Criar grupo

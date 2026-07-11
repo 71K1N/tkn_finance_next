@@ -5,7 +5,6 @@ import { ArrowLeft, Save, Trash2, UserMinus, UserPlus, X } from 'react-feather';
 import swal from 'sweetalert';
 import { Button, DataTable, type DataTableColumn, type DataTableAction, type DataTableHandle } from "tikin-ds";
 import {
-    Badge,
     Box,
     Card,
     Container,
@@ -21,6 +20,7 @@ import {
     Tabs,
     Text,
 } from "@chakra-ui/react";
+import StatusBadge from "@/components/StatusBadge";
 import {
     addGroupMember,
     createGroupExpense,
@@ -103,7 +103,7 @@ function MembersTab({ group, onChanged }: { group: ExpenseGroup; onChanged: () =
         <Stack gap={4}>
             <Card.Root>
                 <Card.Body>
-                    <SimpleGrid columns={{ base: 1, md: 4 }} gap={4}>
+                    <SimpleGrid columns={{ base: 1, md: 2, lg: 4 }} gap={4}>
                         <Field.Root>
                             <Field.Label>ID do usuário</Field.Label>
                             <Input value={userId} onChange={(e) => setUserId(e.target.value)} placeholder="Ex: 202" />
@@ -156,7 +156,7 @@ function MembersTab({ group, onChanged }: { group: ExpenseGroup; onChanged: () =
                                     <Table.Cell>
                                         {member.user_id}
                                         {member.user_id === group.owner_id && (
-                                            <Badge ml={2} colorPalette="purple">Dono</Badge>
+                                            <StatusBadge ml={2} status="primary">Dono</StatusBadge>
                                         )}
                                     </Table.Cell>
                                     <Table.Cell>
@@ -167,9 +167,9 @@ function MembersTab({ group, onChanged }: { group: ExpenseGroup; onChanged: () =
                                                 : formatCurrency(member.share_value ?? 0)}
                                     </Table.Cell>
                                     <Table.Cell>
-                                        <Badge colorPalette={member.active ? "green" : "gray"}>
+                                        <StatusBadge status={member.active ? "success" : "neutral"}>
                                             {member.active ? "Ativo" : "Removido"}
-                                        </Badge>
+                                        </StatusBadge>
                                     </Table.Cell>
                                     <Table.Cell>
                                         {member.active && member.user_id !== group.owner_id && (
@@ -248,7 +248,7 @@ function ExpensesTab({ group }: { group: ExpenseGroup }) {
         { key: "amount", header: "Valor", sortable: true, render: (row) => formatCurrency(row.amount) },
         { key: "paid_by", header: "Pago por" },
         { key: "expense_date", header: "Data", render: (row) => new Date(row.expense_date).toLocaleDateString('pt-BR') },
-        { key: "status", header: "Status", render: (row) => <Badge colorPalette={row.status === "active" ? "green" : "gray"}>{row.status === "active" ? "Ativa" : "Anulada"}</Badge> },
+        { key: "status", header: "Status", render: (row) => <StatusBadge status={row.status === "active" ? "success" : "neutral"}>{row.status === "active" ? "Ativa" : "Anulada"}</StatusBadge> },
     ];
 
     const actions: DataTableAction<GroupExpense>[] = [
@@ -259,7 +259,7 @@ function ExpensesTab({ group }: { group: ExpenseGroup }) {
         <Stack gap={4}>
             <Card.Root>
                 <Card.Body>
-                    <SimpleGrid columns={{ base: 1, md: 4 }} gap={4}>
+                    <SimpleGrid columns={{ base: 1, md: 2, lg: 4 }} gap={4}>
                         <Field.Root>
                             <Field.Label>Descrição</Field.Label>
                             <Input value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Ex: Conta de luz" />
@@ -399,7 +399,7 @@ function BalancesTab({ group }: { group: ExpenseGroup }) {
             <Card.Root>
                 <Card.Body>
                     <Heading size="md" mb={3}>Registrar acerto</Heading>
-                    <SimpleGrid columns={{ base: 1, md: 4 }} gap={4}>
+                    <SimpleGrid columns={{ base: 1, md: 2, lg: 4 }} gap={4}>
                         <Field.Root>
                             <Field.Label>Paguei para (ID)</Field.Label>
                             <Input value={toUserId} onChange={(e) => setToUserId(e.target.value)} placeholder="Ex: 101" />

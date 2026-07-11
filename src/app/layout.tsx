@@ -22,7 +22,8 @@ export default function RootLayout({
       <body className={inter.className}>
         <Providers>
           <Sidebar />
-          <Box className="container" bg="bg.canvas" ml={{ base: 0, md: "sidebar" }}>
+          {/* ml uses literal px, not the "sidebar"/"sidebar-mini" tokens: those are sizes-scale tokens and margin props read from the spacing scale, so the token names don't resolve here */}
+          <Box bg="bg.canvas" ml={{ base: 0, md: "72px", lg: "260px" }}>
             {children}
           </Box>
           <FloatingActionButton />

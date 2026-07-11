@@ -37,3 +37,24 @@ export type TransactionSummary = {
     totalIncome: number;
     balance: number;
 };
+
+export type CategoryBreakdown = {
+    month: string;
+    categories: {
+        categoryId: string;
+        categoryName: string;
+        total: number;
+        transactionCount: number;
+    }[];
+};
+
+export type MonthlyTrendEntry = {
+    month: string;
+    income: number;
+    expenses: number;
+};
+
+export type BalanceEvolutionEntry = {
+    month: string;
+    balance: number;
+};

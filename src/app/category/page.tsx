@@ -151,7 +151,7 @@ export default function PageCategory() {
                             {errors.description && <Field.ErrorText>{errors.description}</Field.ErrorText>}
                         </Field.Root>
                     </SimpleGrid>
-                    <Stack direction="row" gap={2} mt={4}>
+                    <Stack direction="row" gap={2} mt={4} wrap="wrap">
                         <Button colorPalette="primary" onClick={handleSubmit} disabled={loading}>
                             <Save size={16} />
                             {id ? 'Atualizar' : 'Salvar'}

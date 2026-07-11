@@ -3,7 +3,8 @@ import { useRef, useState } from "react";
 import { Edit, Trash2, Save, X } from 'react-feather';
 import swal from 'sweetalert';
 import { Button, DataTable, type DataTableColumn, type DataTableAction, type DataTableHandle } from "tikin-ds";
-import { Badge, Box, Card, Container, Field, Heading, Input, NativeSelect, SimpleGrid, Stack, Text } from "@chakra-ui/react";
+import { Box, Card, Container, Field, Heading, Input, NativeSelect, SimpleGrid, Stack, Text } from "@chakra-ui/react";
+import StatusBadge from "@/components/StatusBadge";
 import { createWishItem, getWishItems, removeWishItem, updateWishItem, updateWishItemStatus } from "@/lib/api/wish-item";
 import type { WishItem, WishItemPriority, WishItemStatus } from "@/lib/types/wish-item";
 
@@ -167,7 +168,7 @@ export default function PageWishlist() {
             key: "priority",
             header: "Prioridade",
             filterable: true,
-            render: (row) => <Badge colorPalette={row.priority === 'high' ? 'red' : row.priority === 'medium' ? 'yellow' : 'gray'}>{PRIORITY_LABEL[row.priority]}</Badge>,
+            render: (row) => <StatusBadge status={row.priority === 'high' ? 'danger' : row.priority === 'medium' ? 'warning' : 'neutral'}>{PRIORITY_LABEL[row.priority]}</StatusBadge>,
         },
         {
             key: "status",
@@ -203,7 +204,7 @@ export default function PageWishlist() {
 
             <Card.Root mb={6}>
                 <Card.Body>
-                    <SimpleGrid columns={{ base: 1, md: 3 }} gap={4}>
+                    <SimpleGrid columns={{ base: 1, md: 2, lg: 3 }} gap={4}>
                         <Field.Root invalid={!!errors.name}>
                             <Field.Label>Nome</Field.Label>
                             <Input
@@ -242,7 +243,7 @@ export default function PageWishlist() {
                             {errors.targetDate && <Field.ErrorText>{errors.targetDate}</Field.ErrorText>}
                         </Field.Root>
                     </SimpleGrid>
-                    <SimpleGrid columns={{ base: 1, md: 3 }} gap={4} mt={4}>
+                    <SimpleGrid columns={{ base: 1, md: 2, lg: 3 }} gap={4} mt={4}>
                         <Field.Root>
                             <Field.Label>Prioridade</Field.Label>
                             <NativeSelect.Root>
@@ -255,7 +256,7 @@ export default function PageWishlist() {
                             </NativeSelect.Root>
                         </Field.Root>
                     </SimpleGrid>
-                    <Stack direction="row" gap={2} mt={4}>
+                    <Stack direction="row" gap={2} mt={4} wrap="wrap">
                         <Button colorPalette="primary" onClick={handleSubmit} disabled={loading}>
                             <Save size={16} />
                             {id ? 'Atualizar' : 'Salvar'}

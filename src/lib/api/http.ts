@@ -1,4 +1,5 @@
-const API_BASE_URL = "http://localhost:8081";
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8081";
+const AUTH_TOKEN = process.env.NEXT_PUBLIC_AUTH_TOKEN ?? "1";
 
 export class ApiError extends Error {
     constructor(message: string, public status?: number, public body?: unknown) {
@@ -38,7 +39,7 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
         method: options.method ?? "GET",
         headers: {
             "Content-Type": "application/json",
-            "Authorization": "Bearer 1",
+            "Authorization": `Bearer ${AUTH_TOKEN}`,
             ...options.headers,
         },
         body: options.body !== undefined ? JSON.stringify(options.body) : undefined,

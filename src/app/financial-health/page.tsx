@@ -1,6 +1,7 @@
 "use client"
 import { useEffect, useState } from "react";
 import { CreditCard, TrendingUp, Save, ArrowDownCircle } from 'react-feather';
+import { Box, Button, Container, Flex, Heading, SimpleGrid, Spinner, Text } from "@chakra-ui/react";
 import DashboardSummaryCard from "@/components/dashboard/DashboardSummaryCard";
 import DashboardTrendChart, { TrendMonth } from "@/components/dashboard/DashboardTrendChart";
 import UpcomingTransactionsCard, { UpcomingTransaction } from "@/components/dashboard/UpcomingTransactionsCard";
@@ -25,10 +26,10 @@ interface DashboardMetrics {
     rangeLabel: string;
 }
 
-const API_URL = "http://localhost:8081";
+const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8081";
 const AUTH_HEADERS = {
     'Content-Type': 'application/json',
-    'Authorization': 'Bearer 1',
+    'Authorization': `Bearer ${process.env.NEXT_PUBLIC_AUTH_TOKEN ?? "1"}`,
 };
 
 function formatCurrency(value: number) {
@@ -120,100 +121,86 @@ export default function FinancialDashboard() {
     useEffect(() => { loadDashboard(); }, []);
 
     return (
-        <main className="container-fluid py-4">
-            <div className="row mb-4 align-items-center">
-                <div className="col">
-                    <h2 className="mb-0">Dashboard Financeiro</h2>
-                    <p className="text-muted mb-0">Visão rápida da sua situação financeira</p>
-                </div>
-                <div className="col-auto">
-                    <AddTransactionAction />
-                </div>
-            </div>
+        <Container maxW="6xl" py={8}>
+            <Flex justify="space-between" align="center" mb={6}>
+                <Box>
+                    <Heading size="5xl">Dashboard Financeiro</Heading>
+                    <Text color="fg.muted">Visão rápida da sua situação financeira</Text>
+                </Box>
+                <AddTransactionAction />
+            </Flex>
 
             {loading && (
-                <div className="text-center py-5">
-                    <div className="spinner-border text-primary" role="status">
-                        <span className="visually-hidden">Carregando...</span>
-                    </div>
-                </div>
+                <Flex justify="center" py={10}>
+                    <Spinner size="lg" color="brand.primary" />
+                </Flex>
             )}
 
             {error && (
-                <div className="alert alert-danger d-flex justify-content-between align-items-center">
-                    <span>{error}</span>
-                    <button className="btn btn-sm btn-outline-danger" onClick={loadDashboard}>Tentar novamente</button>
-                </div>
+                <Flex justify="space-between" align="center" bg="status.danger.subtle" color="status.danger" p={4} borderRadius="md" mb={4}>
+                    <Text>{error}</Text>
+                    <Button size="sm" variant="outline" colorPalette="red" onClick={loadDashboard}>Tentar novamente</Button>
+                </Flex>
             )}
 
             {!loading && !error && metrics && (
                 <>
-                    {/* Summary Cards */}
-                    <div className="row g-4 mb-4">
-                        <div className="col-md-6 col-lg-3">
-                            <DashboardSummaryCard
-                                title="Saldo Devedor"
-                                value={formatCurrency(metrics.debtBalance)}
-                                icon={<CreditCard size={24} />}
-                                colorClass="danger"
-                                subtitle="Despesas não pagas"
-                            />
-                        </div>
-                        <div className="col-md-6 col-lg-3">
-                            <DashboardSummaryCard
-                                title="Saldo a Receber"
-                                value={formatCurrency(metrics.receivableBalance)}
-                                icon={<ArrowDownCircle size={24} />}
-                                colorClass="warning"
-                                subtitle="Receitas pendentes"
-                            />
-                        </div>
-                        <div className="col-md-6 col-lg-3">
-                            <DashboardSummaryCard
-                                title="Total Economizado"
-                                value={formatCurrency(metrics.totalSaved)}
-                                icon={<Save size={24} />}
-                                colorClass={metrics.totalSaved >= 0 ? "success" : "danger"}
-                                subtitle="Saldo líquido das transações pagas"
-                            />
-                        </div>
-                        <div className="col-md-6 col-lg-3">
-                            <DashboardSummaryCard
-                                title="Próx. Vencimentos"
-                                value={`${metrics.upcoming.length} transaç${metrics.upcoming.length === 1 ? 'ão' : 'ões'}`}
-                                icon={<TrendingUp size={24} />}
-                                colorClass="info"
-                                subtitle="Com vencimento a partir de hoje"
-                            />
-                        </div>
-                    </div>
+                    <SimpleGrid columns={{ base: 1, md: 2, lg: 4 }} gap={4} mb={6}>
+                        <DashboardSummaryCard
+                            title="Saldo Devedor"
+                            value={formatCurrency(metrics.debtBalance)}
+                            icon={<CreditCard size={24} />}
+                            colorClass="danger"
+                            subtitle="Despesas não pagas"
+                        />
+                        <DashboardSummaryCard
+                            title="Saldo a Receber"
+                            value={formatCurrency(metrics.receivableBalance)}
+                            icon={<ArrowDownCircle size={24} />}
+                            colorClass="warning"
+                            subtitle="Receitas pendentes"
+                        />
+                        <DashboardSummaryCard
+                            title="Total Economizado"
+                            value={formatCurrency(metrics.totalSaved)}
+                            icon={<Save size={24} />}
+                            colorClass={metrics.totalSaved >= 0 ? "success" : "danger"}
+                            subtitle="Saldo líquido das transações pagas"
+                        />
+                        <DashboardSummaryCard
+                            title="Próx. Vencimentos"
+                            value={`${metrics.upcoming.length} transaç${metrics.upcoming.length === 1 ? 'ão' : 'ões'}`}
+                            icon={<TrendingUp size={24} />}
+                            colorClass="info"
+                            subtitle="Com vencimento a partir de hoje"
+                        />
+                    </SimpleGrid>
 
-                    {/* Trend Chart + Upcoming */}
-                    <div className="row g-4">
-                        <div className="col-lg-7">
+                    <SimpleGrid columns={{ base: 1, lg: 12 }} gap={4}>
+                        <Box gridColumn={{ lg: "span 7" }}>
                             <DashboardTrendChart
                                 data={metrics.trend}
                                 formatCurrency={formatCurrency}
                                 rangeLabel={metrics.rangeLabel}
                             />
-                        </div>
-                        <div className="col-lg-5">
+                        </Box>
+                        <Box gridColumn={{ lg: "span 5" }}>
                             <UpcomingTransactionsCard
                                 transactions={metrics.upcoming}
                                 formatCurrency={formatCurrency}
                                 formatDate={formatDate}
                             />
-                        </div>
-                    </div>
+                        </Box>
+                    </SimpleGrid>
                 </>
             )}
 
             {!loading && !error && metrics && metrics.debtBalance === 0 && metrics.receivableBalance === 0 &&
                 metrics.totalSaved === 0 && metrics.upcoming.length === 0 && (
-                <div className="alert alert-info mt-4">
+                <Box bg="status.info.subtle" color="status.info" p={4} borderRadius="md" mt={4}>
                     Nenhuma transação encontrada. Adicione sua primeira transação para ver o resumo financeiro.
-                </div>
+                </Box>
             )}
-        </main>
+        </Container>
     );
 }

@@ -1,4 +1,5 @@
 import { ReactNode } from "react";
+import { Box, Card, Flex, Heading, Text } from "@chakra-ui/react";
 
 interface DashboardSummaryCardProps {
     title: string;
@@ -10,19 +11,19 @@ interface DashboardSummaryCardProps {
 
 export default function DashboardSummaryCard({ title, value, icon, colorClass, subtitle }: DashboardSummaryCardProps) {
     return (
-        <div className="card h-100 border-0 shadow-sm">
-            <div className="card-body">
-                <div className="d-flex align-items-center mb-3">
-                    <div className={`bg-${colorClass} bg-opacity-10 p-3 rounded flex-shrink-0`}>
-                        <span className={`text-${colorClass}`}>{icon}</span>
-                    </div>
-                    <div className="flex-grow-1 ms-3">
-                        <h6 className="card-title mb-0 text-muted">{title}</h6>
-                        <h3 className="mb-0 mt-1">{value}</h3>
-                    </div>
-                </div>
-                {subtitle && <div className="text-muted small">{subtitle}</div>}
-            </div>
-        </div>
+        <Card.Root h="full">
+            <Card.Body>
+                <Flex align="center" gap={3} mb={3}>
+                    <Box bg={`status.${colorClass}.subtle`} color={`status.${colorClass}`} p={3} borderRadius="md" flexShrink={0}>
+                        {icon}
+                    </Box>
+                    <Box flex={1}>
+                        <Text fontSize="sm" fontWeight="semibold" color="fg.muted">{title}</Text>
+                        <Heading size="lg" mt={1}>{value}</Heading>
+                    </Box>
+                </Flex>
+                {subtitle && <Text fontSize="sm" color="fg.muted">{subtitle}</Text>}
+            </Card.Body>
+        </Card.Root>
     );
 }

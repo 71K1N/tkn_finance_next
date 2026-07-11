@@ -1,6 +1,7 @@
 export type SavingsGoal = {
     id: string;
     userId: number;
+    name: string;
     targetAmount: number;
     currentSaved: number;
     monthlyAllocation: number;
@@ -8,6 +9,7 @@ export type SavingsGoal = {
 };
 
 export type SavingsGoalInput = {
+    name: string;
     targetAmount: number;
     monthlyAllocation: number;
 };

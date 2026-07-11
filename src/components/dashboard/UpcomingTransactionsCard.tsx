@@ -1,4 +1,6 @@
 import { Calendar } from 'react-feather';
+import { Card, Flex, Heading, Stack, Text } from "@chakra-ui/react";
+import StatusBadge from "@/components/StatusBadge";
 
 export interface UpcomingTransaction {
     id?: number;
@@ -16,35 +18,35 @@ interface UpcomingTransactionsCardProps {
 
 export default function UpcomingTransactionsCard({ transactions, formatCurrency, formatDate }: UpcomingTransactionsCardProps) {
     return (
-        <div className="card border-0 shadow-sm h-100">
-            <div className="card-body">
-                <h5 className="card-title mb-4">Próximas Transações a Vencer</h5>
+        <Card.Root h="full">
+            <Card.Body>
+                <Heading size="md" mb={4}>Próximas Transações a Vencer</Heading>
                 {transactions.length === 0 ? (
-                    <p className="text-muted mb-0">Nenhuma transação pendente com vencimento próximo.</p>
+                    <Text color="fg.muted">Nenhuma transação pendente com vencimento próximo.</Text>
                 ) : (
-                    <ul className="list-group list-group-flush">
+                    <Stack gap={0} divideY="1px">
                         {transactions.map((t) => (
-                            <li key={t.id} className="list-group-item px-0 d-flex justify-content-between align-items-center">
-                                <div>
-                                    <div className="fw-semibold">{t.name}</div>
-                                    <div className="text-muted small d-flex align-items-center gap-1">
+                            <Flex key={t.id} justify="space-between" align="center" py={2}>
+                                <Stack gap={0}>
+                                    <Text fontWeight="semibold">{t.name}</Text>
+                                    <Flex align="center" gap={1} color="fg.muted" fontSize="sm">
                                         <Calendar size={12} />
-                                        {formatDate(t.due_date)}
-                                    </div>
-                                </div>
-                                <div className="text-end">
-                                    <div className={`fw-bold ${t.type === 'EXPENSE' ? 'text-danger' : 'text-success'}`}>
+                                        <Text>{formatDate(t.due_date)}</Text>
+                                    </Flex>
+                                </Stack>
+                                <Stack gap={1} align="flex-end">
+                                    <Text fontWeight="bold" color={t.type === 'EXPENSE' ? 'status.danger' : 'status.success'}>
                                         {t.type === 'EXPENSE' ? '-' : '+'}{formatCurrency(t.amount)}
-                                    </div>
-                                    <span className={`badge ${t.type === 'EXPENSE' ? 'bg-danger' : 'bg-success'}`}>
+                                    </Text>
+                                    <StatusBadge status={t.type === 'EXPENSE' ? 'danger' : 'success'}>
                                         {t.type === 'EXPENSE' ? 'Despesa' : 'Receita'}
-                                    </span>
-                                </div>
-                            </li>
+                                    </StatusBadge>
+                                </Stack>
+                            </Flex>
                         ))}
-                    </ul>
+                    </Stack>
                 )}
-            </div>
-        </div>
+            </Card.Body>
+        </Card.Root>
     );
 }

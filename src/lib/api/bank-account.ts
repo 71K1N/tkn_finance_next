@@ -9,3 +9,4 @@ export const getBankAccounts = (params: DataTableRequestParams) =>
 export const createBankAccount = (input: BankAccountInput) => http.post<BankAccount>(BASE_PATH, input);
 export const updateBankAccount = (id: string, input: BankAccountInput) => http.patch<BankAccount>(`${BASE_PATH}/${id}`, input);
 export const removeBankAccount = (id: string) => http.delete<void>(`${BASE_PATH}/${id}`);
+export const getTotalBalance = () => http.get<{ totalBalance: number }>(`${BASE_PATH}/total-balance`);

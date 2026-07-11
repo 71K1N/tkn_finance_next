@@ -1,11 +1,14 @@
 import Link from 'next/link';
 import { PlusCircle } from 'react-feather';
+import { Button } from "@chakra-ui/react";
 
 export default function AddTransactionAction() {
     return (
-        <Link href="/transaction" className="btn btn-primary d-inline-flex align-items-center gap-2">
-            <PlusCircle size={18} />
-            Nova Transação
-        </Link>
+        <Button asChild colorPalette="primary">
+            <Link href="/transaction">
+                <PlusCircle size={18} />
+                Nova Transação
+            </Link>
+        </Button>
     );
 }

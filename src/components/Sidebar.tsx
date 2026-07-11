@@ -35,18 +35,29 @@ const navSections: NavSection[] = [
     },
 ]
 
-function BrandHeader() {
+function BrandHeader({ compact = false }: { compact?: boolean }) {
     return (
         <Flex align="center" gap={2} px={4} py={5}>
             <Box bg="brand.primary" color="white" borderRadius="md" p={2} display="flex" alignItems="center" justifyContent="center">
                 <Activity size={18} />
             </Box>
-            <Text fontWeight="bold" color="text.heading" fontSize="lg">e-TKN Fin Lite</Text>
+            <Text
+                fontWeight="bold"
+                color="text.heading"
+                fontSize="lg"
+                display={compact ? { base: 'block', md: 'none', lg: 'block' } : 'block'}
+                _groupHover={compact ? { display: 'block' } : undefined}
+            >
+                e-TKN Fin Lite
+            </Text>
         </Flex>
     )
 }
 
-function NavLinks({ pathname, onNavigate }: { pathname: string; onNavigate?: () => void }) {
+function NavLinks({ pathname, onNavigate, compact = false }: { pathname: string; onNavigate?: () => void; compact?: boolean }) {
+    const labelDisplay = compact ? { base: 'block', md: 'none', lg: 'block' } : 'block'
+    const labelGroupHover = compact ? { display: 'block' } : undefined
+
     return (
         <Box px={3}>
             {navSections.map((section) => (
@@ -59,6 +70,8 @@ function NavLinks({ pathname, onNavigate }: { pathname: string; onNavigate?: () 
                         letterSpacing="wide"
                         px={2}
                         mb={2}
+                        display={labelDisplay}
+                        _groupHover={labelGroupHover}
                     >
                         {section.title}
                     </Text>
@@ -79,7 +92,7 @@ function NavLinks({ pathname, onNavigate }: { pathname: string; onNavigate?: () 
                                         _hover={{ color: active ? 'brand.primary' : 'text.heading' }}
                                     >
                                         <Icon size={18} />
-                                        <Text fontSize="sm">{label}</Text>
+                                        <Text fontSize="sm" display={labelDisplay} _groupHover={labelGroupHover}>{label}</Text>
                                     </Flex>
                                 </Link>
                             )
@@ -100,19 +113,24 @@ export default function Sidebar() {
         <>
             <Box
                 as="aside"
+                role="group"
                 position="fixed"
                 top={0}
                 left={0}
                 h="100vh"
-                w="sidebar"
+                w={{ base: 'sidebar-mini', lg: 'sidebar' }}
                 bg="sidebar.bg"
                 borderRight="1px solid"
                 borderColor="sidebar.border"
                 display={{ base: 'none', md: 'block' }}
                 overflowY="auto"
+                overflowX="hidden"
+                zIndex="docked"
+                transition="width 0.2s ease"
+                _hover={{ w: 'sidebar' }}
             >
-                <BrandHeader />
-                <NavLinks pathname={pathname} />
+                <BrandHeader compact />
+                <NavLinks pathname={pathname} compact />
             </Box>
 
             <Flex

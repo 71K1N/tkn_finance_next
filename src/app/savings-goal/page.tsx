@@ -23,10 +23,11 @@ function formatCurrency(value: number) {
 
 export default function PageSavingsGoal() {
     const [id, setId] = useState<string>("");
+    const [name, setName] = useState<string>("");
     const [targetAmount, setTargetAmount] = useState<number>(0);
     const [monthlyAllocation, setMonthlyAllocation] = useState<number>(0);
     const [loading, setLoading] = useState<boolean>(false);
-    const [errors, setErrors] = useState<{targetAmount?: string, monthlyAllocation?: string}>({});
+    const [errors, setErrors] = useState<{name?: string, targetAmount?: string, monthlyAllocation?: string}>({});
     const tableRef = useRef<DataTableHandle>(null);
 
     const [movementTarget, setMovementTarget] = useState<SavingsGoal | null>(null);
@@ -34,7 +35,8 @@ export default function PageSavingsGoal() {
     const [movementAmount, setMovementAmount] = useState<number>(0);
 
     function validateForm() {
-        const newErrors: {targetAmount?: string, monthlyAllocation?: string} = {};
+        const newErrors: {name?: string, targetAmount?: string, monthlyAllocation?: string} = {};
+        if (!name.trim()) newErrors.name = "Nome é obrigatório";
         if (!targetAmount || targetAmount <= 0) newErrors.targetAmount = "Valor alvo deve ser positivo";
         if (!monthlyAllocation || monthlyAllocation <= 0) newErrors.monthlyAllocation = "Aporte mensal deve ser positivo";
         setErrors(newErrors);
@@ -59,7 +61,7 @@ export default function PageSavingsGoal() {
     async function store() {
         setLoading(true);
         try {
-            await createSavingsGoal({ targetAmount, monthlyAllocation });
+            await createSavingsGoal({ name, targetAmount, monthlyAllocation });
             swal("Sucesso!", "Meta criada com sucesso!", "success");
             clearForm();
             tableRef.current?.refetch();
@@ -73,7 +75,7 @@ export default function PageSavingsGoal() {
     async function update() {
         setLoading(true);
         try {
-            await updateSavingsGoal(id, { targetAmount, monthlyAllocation });
+            await updateSavingsGoal(id, { name, targetAmount, monthlyAllocation });
             swal("Sucesso!", "Meta atualizada com sucesso!", "success");
             clearForm();
             tableRef.current?.refetch();
@@ -109,12 +111,14 @@ export default function PageSavingsGoal() {
 
     function edit(item: SavingsGoal) {
         setId(item.id);
+        setName(item.name);
         setTargetAmount(item.targetAmount);
         setMonthlyAllocation(item.monthlyAllocation);
     }
 
     function clearForm() {
         setId("");
+        setName("");
         setTargetAmount(0);
         setMonthlyAllocation(0);
         setErrors({});
@@ -146,6 +150,11 @@ export default function PageSavingsGoal() {
     }
 
     const columns: DataTableColumn<SavingsGoal>[] = [
+        {
+            key: "name",
+            header: "Nome",
+            sortable: true,
+        },
         {
             key: "targetAmount",
             header: "Valor Alvo",
@@ -199,7 +208,19 @@ export default function PageSavingsGoal() {
 
             <Card.Root mb={6}>
                 <Card.Body>
-                    <SimpleGrid columns={{ base: 1, md: 2 }} gap={4}>
+                    <SimpleGrid columns={{ base: 1, md: 2, lg: 3 }} gap={4}>
+                        <Field.Root invalid={!!errors.name}>
+                            <Field.Label>Nome</Field.Label>
+                            <Input
+                                placeholder="Ex: Viagem para a praia"
+                                value={name}
+                                onChange={(e) => {
+                                    setName(e.target.value);
+                                    if (errors.name) setErrors({...errors, name: undefined});
+                                }}
+                            />
+                            {errors.name && <Field.ErrorText>{errors.name}</Field.ErrorText>}
+                        </Field.Root>
                         <Field.Root invalid={!!errors.targetAmount}>
                             <Field.Label>Valor Alvo</Field.Label>
                             <Input
@@ -227,7 +248,7 @@ export default function PageSavingsGoal() {
                             {errors.monthlyAllocation && <Field.ErrorText>{errors.monthlyAllocation}</Field.ErrorText>}
                         </Field.Root>
                     </SimpleGrid>
-                    <Stack direction="row" gap={2} mt={4}>
+                    <Stack direction="row" gap={2} mt={4} wrap="wrap">
                         <Button colorPalette="primary" onClick={handleSubmit} disabled={loading}>
                             <Save size={16} />
                             {id ? 'Atualizar' : 'Salvar'}
@@ -266,7 +287,7 @@ export default function PageSavingsGoal() {
                             </Dialog.Header>
                             <Dialog.Body>
                                 <Text mb={4}>
-                                    <strong>Meta:</strong> {movementTarget ? formatCurrency(movementTarget.targetAmount) : ''}<br />
+                                    <strong>Meta:</strong> {movementTarget?.name} ({movementTarget ? formatCurrency(movementTarget.targetAmount) : ''})<br />
                                     <strong>Saldo atual:</strong> {movementTarget ? formatCurrency(movementTarget.currentSaved) : ''}
                                 </Text>
                                 <Field.Root>
