@@ -6,10 +6,11 @@ import { Button, DataTable, type DataTableColumn, type DataTableAction, type Dat
 import { Box, Card, Container, Field, Heading, HStack, Input, SimpleGrid, Stack, Text } from "@chakra-ui/react";
 import { createBankAccount, getBankAccounts, removeBankAccount, updateBankAccount } from "@/lib/api/bank-account";
 import type { BankAccount } from "@/lib/types/bank-account";
-import { formatCurrency } from "@/lib/utils/currency";
+import { useFormatCurrency } from "@/lib/hooks/useFormatCurrency";
 import MoneyInput from "@/components/common/MoneyInput";
 
 export default function PageAccount() {
+    const formatCurrency = useFormatCurrency();
     const [description, setDescription] = useState<string>("");
     const [balance, setBalance] = useState<number>(0);
     const [id, setId] = useState<string>("");

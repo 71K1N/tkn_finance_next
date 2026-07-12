@@ -1,8 +1,9 @@
 "use client"
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Activity, CreditCard, DollarSign, Grid, Home, List, Menu, PieChart, ShoppingBag, Target, Users, X } from 'react-feather'
+import { Activity, CreditCard, DollarSign, Eye, EyeOff, Grid, Home, List, Menu, PieChart, ShoppingBag, Target, Users, X } from 'react-feather'
 import { Box, Drawer, Flex, IconButton, Text, useDisclosure } from '@chakra-ui/react'
+import { useHideValues } from '@/contexts/HideValuesContext'
 
 type NavItem = { href: string; label: string; icon: typeof Home }
 type NavSection = { title: string; items: NavItem[] }
@@ -105,9 +106,38 @@ function NavLinks({ pathname, onNavigate, compact = false }: { pathname: string;
     )
 }
 
+function HideValuesToggle({ compact = false }: { compact?: boolean }) {
+    const { hidden, toggle } = useHideValues()
+    const labelDisplay = compact ? { base: 'block', md: 'none', lg: 'block' } : 'block'
+    const labelGroupHover = compact ? { display: 'block' } : undefined
+
+    return (
+        <Box px={3} mb={2}>
+            <Flex
+                as="button"
+                onClick={toggle}
+                align="center"
+                gap={2}
+                px={2}
+                py={2}
+                w="full"
+                borderRadius="md"
+                color="text.muted"
+                _hover={{ color: 'text.heading' }}
+            >
+                {hidden ? <Eye size={18} /> : <EyeOff size={18} />}
+                <Text fontSize="sm" display={labelDisplay} _groupHover={labelGroupHover}>
+                    {hidden ? 'Mostrar valores' : 'Ocultar valores'}
+                </Text>
+            </Flex>
+        </Box>
+    )
+}
+
 export default function Sidebar() {
     const pathname = usePathname()
     const { open, onOpen, onClose } = useDisclosure()
+    const { hidden, toggle } = useHideValues()
 
     return (
         <>
@@ -132,6 +162,7 @@ export default function Sidebar() {
             >
                 <BrandHeader compact />
                 <NavLinks pathname={pathname} compact />
+                <HideValuesToggle compact />
             </Box>
 
             <Flex
@@ -153,9 +184,14 @@ export default function Sidebar() {
                     </Box>
                     <Text fontWeight="bold" color="text.heading">e-TKN Fin Lite</Text>
                 </Flex>
-                <IconButton aria-label="Abrir menu" variant="ghost" onClick={onOpen}>
-                    <Menu size={20} />
-                </IconButton>
+                <Flex align="center" gap={1}>
+                    <IconButton aria-label={hidden ? 'Mostrar valores' : 'Ocultar valores'} variant="ghost" onClick={toggle}>
+                        {hidden ? <Eye size={20} /> : <EyeOff size={20} />}
+                    </IconButton>
+                    <IconButton aria-label="Abrir menu" variant="ghost" onClick={onOpen}>
+                        <Menu size={20} />
+                    </IconButton>
+                </Flex>
             </Flex>
 
             <Drawer.Root open={open} onOpenChange={(details) => (details.open ? onOpen() : onClose())} placement="start">

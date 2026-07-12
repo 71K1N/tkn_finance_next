@@ -1,14 +1,10 @@
+"use client"
 import { Card, SimpleGrid, Text } from "@chakra-ui/react";
 import type { TransactionSummary } from "@/lib/types/transaction";
-
-function formatCurrency(value: number) {
-    return new Intl.NumberFormat('pt-BR', {
-        style: 'currency',
-        currency: 'BRL',
-    }).format(value);
-}
+import { useFormatCurrency } from "@/lib/hooks/useFormatCurrency";
 
 export default function TransactionSummaryCards({ summary }: { summary: TransactionSummary | null }) {
+    const formatCurrency = useFormatCurrency();
     if (!summary) return null;
 
     return (

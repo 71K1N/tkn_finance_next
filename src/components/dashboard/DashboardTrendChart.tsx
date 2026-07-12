@@ -3,6 +3,7 @@ import {
     BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer
 } from 'recharts';
 import { Badge, Box, Card, Flex, Heading, Text } from "@chakra-ui/react";
+import { useHideValues } from "@/contexts/HideValuesContext";
 
 export interface TrendMonth {
     month: string;
@@ -17,6 +18,7 @@ interface DashboardTrendChartProps {
 }
 
 export default function DashboardTrendChart({ data, formatCurrency, rangeLabel }: DashboardTrendChartProps) {
+    const { hidden } = useHideValues();
     return (
         <Card.Root h="full">
             <Card.Body>
@@ -34,7 +36,7 @@ export default function DashboardTrendChart({ data, formatCurrency, rangeLabel }
                             <BarChart data={data}>
                                 <CartesianGrid strokeDasharray="3 3" />
                                 <XAxis dataKey="month" />
-                                <YAxis tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`} />
+                                <YAxis tickFormatter={(v) => hidden ? '••' : `${(v / 1000).toFixed(0)}k`} />
                                 <Tooltip formatter={(value) => formatCurrency(Number(value))} />
                                 <Legend />
                                 <Bar dataKey="income" name="Entradas" fill="#00C49F" />

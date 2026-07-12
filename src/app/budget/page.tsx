@@ -8,10 +8,11 @@ import { createBudget, getBudgets, removeBudget, updateBudget } from "@/lib/api/
 import { getCategories } from "@/lib/api/category";
 import type { Budget, RolloverPolicy } from "@/lib/types/budget";
 import type { Category } from "@/lib/types/category";
-import { formatCurrency } from "@/lib/utils/currency";
+import { useFormatCurrency } from "@/lib/hooks/useFormatCurrency";
 import MoneyInput from "@/components/common/MoneyInput";
 
 export default function PageBudget() {
+    const formatCurrency = useFormatCurrency();
     const [categoryId, setCategoryId] = useState<string>("");
     const [month, setMonth] = useState<string>("");
     const [amount, setAmount] = useState<number>(0);

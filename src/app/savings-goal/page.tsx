@@ -13,10 +13,11 @@ import {
     withdrawSavingsGoal,
 } from "@/lib/api/savings-goal";
 import type { SavingsGoal } from "@/lib/types/savings-goal";
-import { formatCurrency } from "@/lib/utils/currency";
+import { useFormatCurrency } from "@/lib/hooks/useFormatCurrency";
 import MoneyInput from "@/components/common/MoneyInput";
 
 export default function PageSavingsGoal() {
+    const formatCurrency = useFormatCurrency();
     const [id, setId] = useState<string>("");
     const [name, setName] = useState<string>("");
     const [targetAmount, setTargetAmount] = useState<number>(0);

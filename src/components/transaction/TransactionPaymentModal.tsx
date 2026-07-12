@@ -5,7 +5,7 @@ import { Button } from "tikin-ds";
 import { Dialog, Field, Input, Portal, Stack, Text } from "@chakra-ui/react";
 import { payTransaction } from "@/lib/api/transaction";
 import type { Transaction } from "@/lib/types/transaction";
-import { formatCurrency } from "@/lib/utils/currency";
+import { useFormatCurrency } from "@/lib/hooks/useFormatCurrency";
 import MoneyInput from "@/components/common/MoneyInput";
 
 type TransactionPaymentModalProps = {
@@ -15,6 +15,7 @@ type TransactionPaymentModalProps = {
 };
 
 export default function TransactionPaymentModal({ transaction, onClose, onSaved }: TransactionPaymentModalProps) {
+    const formatCurrency = useFormatCurrency();
     const [paymentDate, setPaymentDate] = useState<string>("");
     const [paidAmount, setPaidAmount] = useState<number>(0);
     const [loading, setLoading] = useState<boolean>(false);

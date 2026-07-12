@@ -7,7 +7,7 @@ import { Box, Card, Container, Field, Heading, Input, NativeSelect, SimpleGrid, 
 import StatusBadge from "@/components/StatusBadge";
 import { createWishItem, getWishItems, removeWishItem, updateWishItem, updateWishItemStatus } from "@/lib/api/wish-item";
 import type { WishItem, WishItemPriority, WishItemStatus } from "@/lib/types/wish-item";
-import { formatCurrency } from "@/lib/utils/currency";
+import { useFormatCurrency } from "@/lib/hooks/useFormatCurrency";
 import MoneyInput from "@/components/common/MoneyInput";
 
 const STATUS_LABEL: Record<WishItemStatus, string> = {
@@ -35,6 +35,7 @@ function formatDate(dateString: string) {
 }
 
 export default function PageWishlist() {
+    const formatCurrency = useFormatCurrency();
     const [id, setId] = useState<string>("");
     const [name, setName] = useState<string>("");
     const [estimatedCost, setEstimatedCost] = useState<number>(0);

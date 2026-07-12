@@ -6,6 +6,7 @@ import DashboardSummaryCard from "@/components/dashboard/DashboardSummaryCard";
 import DashboardTrendChart, { TrendMonth } from "@/components/dashboard/DashboardTrendChart";
 import UpcomingTransactionsCard, { UpcomingTransaction } from "@/components/dashboard/UpcomingTransactionsCard";
 import AddTransactionAction from "@/components/dashboard/AddTransactionAction";
+import { useFormatCurrency } from "@/lib/hooks/useFormatCurrency";
 
 interface Transaction {
     id?: number;
@@ -31,10 +32,6 @@ const AUTH_HEADERS = {
     'Content-Type': 'application/json',
     'Authorization': `Bearer ${process.env.NEXT_PUBLIC_AUTH_TOKEN ?? "1"}`,
 };
-
-function formatCurrency(value: number) {
-    return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
-}
 
 function formatDate(dateString: string): string {
     const [year, month, day] = dateString.split('-').map(Number);
@@ -98,6 +95,7 @@ function computeMetrics(transactions: Transaction[]): DashboardMetrics {
 }
 
 export default function FinancialDashboard() {
+    const formatCurrency = useFormatCurrency();
     const [metrics, setMetrics] = useState<DashboardMetrics | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);

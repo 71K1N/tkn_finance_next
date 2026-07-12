@@ -16,6 +16,7 @@ import type { Transaction, TransactionSummary } from "@/lib/types/transaction";
 import type { Category } from "@/lib/types/category";
 import type { Subcategory } from "@/lib/types/subcategory";
 import type { BankAccount } from "@/lib/types/bank-account";
+import { useFormatCurrency } from "@/lib/hooks/useFormatCurrency";
 
 function formatDate(dateString: string | null): string {
     if (!dateString) return "N/A";
@@ -28,6 +29,7 @@ function formatDate(dateString: string | null): string {
 }
 
 export default function PageTransaction() {
+    const formatCurrency = useFormatCurrency();
     const [loading, setLoading] = useState<boolean>(false);
 
     const [categories, setCategories] = useState<Category[]>([]);
@@ -155,7 +157,7 @@ export default function PageTransaction() {
             sortable: true,
             render: (row) => (
                 <Text color={row.type === 'EXPENSE' ? 'red.solid' : 'green.solid'}>
-                    R$ {row.amount.toFixed(2)}
+                    {formatCurrency(row.amount)}
                 </Text>
             ),
         },

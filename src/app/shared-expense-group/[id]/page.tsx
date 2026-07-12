@@ -42,10 +42,11 @@ import type {
     ShareType,
     SplitType,
 } from "@/lib/types/shared-expense-group";
-import { formatCurrency } from "@/lib/utils/currency";
+import { useFormatCurrency } from "@/lib/hooks/useFormatCurrency";
 import MoneyInput from "@/components/common/MoneyInput";
 
 function MembersTab({ group, onChanged }: { group: ExpenseGroup; onChanged: () => void }) {
+    const formatCurrency = useFormatCurrency();
     const [userId, setUserId] = useState<string>("");
     const [shareType, setShareType] = useState<ShareType>("equal");
     const [shareValue, setShareValue] = useState<string>("");
@@ -188,6 +189,7 @@ function MembersTab({ group, onChanged }: { group: ExpenseGroup; onChanged: () =
 }
 
 function ExpensesTab({ group }: { group: ExpenseGroup }) {
+    const formatCurrency = useFormatCurrency();
     const [description, setDescription] = useState("");
     const [amount, setAmount] = useState<number>(0);
     const [splitType, setSplitType] = useState<SplitType>("equal");
@@ -305,6 +307,7 @@ function ExpensesTab({ group }: { group: ExpenseGroup }) {
 }
 
 function BalancesTab({ group }: { group: ExpenseGroup }) {
+    const formatCurrency = useFormatCurrency();
     const [balances, setBalances] = useState<GroupBalance[]>([]);
     const [suggestions, setSuggestions] = useState<SettlementSuggestion[]>([]);
     const [toUserId, setToUserId] = useState("");

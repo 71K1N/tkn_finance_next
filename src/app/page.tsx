@@ -13,6 +13,7 @@ import { getSavingsGoals } from "@/lib/api/savings-goal";
 import type { CategoryBreakdown, MonthlyTrendEntry, BalanceEvolutionEntry, TransactionSummary } from "@/lib/types/transaction";
 import type { SavingsGoal } from "@/lib/types/savings-goal";
 import AiInsightsCard from "@/components/dashboard/AiInsightsCard";
+import { useFormatCurrency } from "@/lib/hooks/useFormatCurrency";
 
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8', '#82CA9D', '#FF6B6B'];
 const SAVINGS_RATE_TARGET = 20;
@@ -21,19 +22,13 @@ function currentMonthString() {
     return new Date().toISOString().slice(0, 7);
 }
 
-function formatCurrency(value: number) {
-    return new Intl.NumberFormat('pt-BR', {
-        style: 'currency',
-        currency: 'BRL'
-    }).format(value);
-}
-
 function calculateProgress(current: number, target: number) {
     if (target <= 0) return 0;
     return Math.min((current / target) * 100, 100);
 }
 
 export default function Home() {
+    const formatCurrency = useFormatCurrency();
     const [totalBalance, setTotalBalance] = useState(0);
     const [summary, setSummary] = useState<TransactionSummary>({ totalIncome: 0, totalExpenses: 0, balance: 0 });
     const [savingsGoals, setSavingsGoals] = useState<SavingsGoal[]>([]);
@@ -202,7 +197,7 @@ export default function Home() {
                                         cx="50%"
                                         cy="50%"
                                         outerRadius={100}
-                                        label
+                                        label={({ percent }) => `${(percent * 100).toFixed(1)}%`}
                                     >
                                         {categoryBreakdown.categories.map((entry, index) => (
                                             <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
