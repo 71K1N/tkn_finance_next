@@ -13,13 +13,8 @@ import {
     withdrawSavingsGoal,
 } from "@/lib/api/savings-goal";
 import type { SavingsGoal } from "@/lib/types/savings-goal";
-
-function formatCurrency(value: number) {
-    return new Intl.NumberFormat('pt-BR', {
-        style: 'currency',
-        currency: 'BRL',
-    }).format(value);
-}
+import { formatCurrency } from "@/lib/utils/currency";
+import MoneyInput from "@/components/common/MoneyInput";
 
 export default function PageSavingsGoal() {
     const [id, setId] = useState<string>("");
@@ -223,12 +218,10 @@ export default function PageSavingsGoal() {
                         </Field.Root>
                         <Field.Root invalid={!!errors.targetAmount}>
                             <Field.Label>Valor Alvo</Field.Label>
-                            <Input
-                                type="number"
-                                step="0.01"
-                                value={targetAmount || ""}
-                                onChange={(e) => {
-                                    setTargetAmount(Number(e.target.value));
+                            <MoneyInput
+                                value={targetAmount}
+                                onValueChange={(value) => {
+                                    setTargetAmount(value);
                                     if (errors.targetAmount) setErrors({...errors, targetAmount: undefined});
                                 }}
                             />
@@ -236,12 +229,10 @@ export default function PageSavingsGoal() {
                         </Field.Root>
                         <Field.Root invalid={!!errors.monthlyAllocation}>
                             <Field.Label>Aporte Mensal</Field.Label>
-                            <Input
-                                type="number"
-                                step="0.01"
-                                value={monthlyAllocation || ""}
-                                onChange={(e) => {
-                                    setMonthlyAllocation(Number(e.target.value));
+                            <MoneyInput
+                                value={monthlyAllocation}
+                                onValueChange={(value) => {
+                                    setMonthlyAllocation(value);
                                     if (errors.monthlyAllocation) setErrors({...errors, monthlyAllocation: undefined});
                                 }}
                             />
@@ -292,11 +283,9 @@ export default function PageSavingsGoal() {
                                 </Text>
                                 <Field.Root>
                                     <Field.Label>Valor</Field.Label>
-                                    <Input
-                                        type="number"
-                                        step="0.01"
-                                        value={movementAmount || ""}
-                                        onChange={(e) => setMovementAmount(Number(e.target.value))}
+                                    <MoneyInput
+                                        value={movementAmount}
+                                        onValueChange={setMovementAmount}
                                     />
                                 </Field.Root>
                             </Dialog.Body>

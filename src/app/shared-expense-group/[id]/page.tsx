@@ -42,10 +42,8 @@ import type {
     ShareType,
     SplitType,
 } from "@/lib/types/shared-expense-group";
-
-function formatCurrency(value: number) {
-    return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
-}
+import { formatCurrency } from "@/lib/utils/currency";
+import MoneyInput from "@/components/common/MoneyInput";
 
 function MembersTab({ group, onChanged }: { group: ExpenseGroup; onChanged: () => void }) {
     const [userId, setUserId] = useState<string>("");
@@ -266,7 +264,7 @@ function ExpensesTab({ group }: { group: ExpenseGroup }) {
                         </Field.Root>
                         <Field.Root>
                             <Field.Label>Valor</Field.Label>
-                            <Input type="number" step="0.01" value={amount || ""} onChange={(e) => setAmount(Number(e.target.value))} />
+                            <MoneyInput value={amount} onValueChange={setAmount} />
                         </Field.Root>
                         <Field.Root>
                             <Field.Label>Tipo de divisão</Field.Label>
@@ -406,7 +404,7 @@ function BalancesTab({ group }: { group: ExpenseGroup }) {
                         </Field.Root>
                         <Field.Root>
                             <Field.Label>Valor</Field.Label>
-                            <Input type="number" step="0.01" value={amount || ""} onChange={(e) => setAmount(Number(e.target.value))} />
+                            <MoneyInput value={amount} onValueChange={setAmount} />
                         </Field.Root>
                         <Field.Root>
                             <Field.Label>Nota</Field.Label>

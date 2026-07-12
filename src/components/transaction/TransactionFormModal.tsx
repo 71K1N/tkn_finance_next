@@ -9,6 +9,7 @@ import type { Transaction, TransactionType } from "@/lib/types/transaction";
 import type { Category } from "@/lib/types/category";
 import type { Subcategory } from "@/lib/types/subcategory";
 import type { BankAccount } from "@/lib/types/bank-account";
+import MoneyInput from "@/components/common/MoneyInput";
 
 type TransactionFormModalProps = {
     open: boolean;
@@ -147,11 +148,9 @@ export default function TransactionFormModal({
                             <SimpleGrid columns={{ base: 1, md: 2 }} gap={4} mt={4}>
                                 <Field.Root>
                                     <Field.Label>Valor</Field.Label>
-                                    <Input
-                                        type="number"
-                                        step="0.01"
-                                        value={amount || ""}
-                                        onChange={(e) => setAmount(Number(e.target.value))}
+                                    <MoneyInput
+                                        value={amount}
+                                        onValueChange={setAmount}
                                     />
                                 </Field.Root>
                                 <Field.Root>

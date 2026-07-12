@@ -16,6 +16,7 @@
     "react": "^18",
     "react-dom": "^18",
     "react-feather": "^2.0.10",
+    "react-number-format": "^5.4.5",
     "recharts": "^2.15.3",
     "sweetalert": "^2.1.2",
     "tikin-ds": "^0.0.3"

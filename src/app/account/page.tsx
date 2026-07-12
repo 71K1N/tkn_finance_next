@@ -6,13 +6,8 @@ import { Button, DataTable, type DataTableColumn, type DataTableAction, type Dat
 import { Box, Card, Container, Field, Heading, HStack, Input, SimpleGrid, Stack, Text } from "@chakra-ui/react";
 import { createBankAccount, getBankAccounts, removeBankAccount, updateBankAccount } from "@/lib/api/bank-account";
 import type { BankAccount } from "@/lib/types/bank-account";
-
-function formatCurrency(value: number) {
-    return new Intl.NumberFormat('pt-BR', {
-        style: 'currency',
-        currency: 'BRL'
-    }).format(value);
-}
+import { formatCurrency } from "@/lib/utils/currency";
+import MoneyInput from "@/components/common/MoneyInput";
 
 export default function PageAccount() {
     const [description, setDescription] = useState<string>("");
@@ -166,13 +161,12 @@ export default function PageAccount() {
                         </Field.Root>
                         <Field.Root invalid={!!errors.balance}>
                             <Field.Label>Saldo</Field.Label>
-                            <Input
-                                type="number"
-                                step="0.01"
+                            <MoneyInput
                                 placeholder="Digite o saldo da conta"
-                                value={balance || ""}
-                                onChange={(e) => {
-                                    setBalance(Number(e.target.value));
+                                value={balance}
+                                allowNegative
+                                onValueChange={(value) => {
+                                    setBalance(value);
                                     if (errors.balance) setErrors({...errors, balance: undefined});
                                 }}
                             />

@@ -7,6 +7,8 @@ import { Box, Card, Container, Field, Heading, Input, NativeSelect, SimpleGrid, 
 import StatusBadge from "@/components/StatusBadge";
 import { createWishItem, getWishItems, removeWishItem, updateWishItem, updateWishItemStatus } from "@/lib/api/wish-item";
 import type { WishItem, WishItemPriority, WishItemStatus } from "@/lib/types/wish-item";
+import { formatCurrency } from "@/lib/utils/currency";
+import MoneyInput from "@/components/common/MoneyInput";
 
 const STATUS_LABEL: Record<WishItemStatus, string> = {
     active: "Ativo",
@@ -27,13 +29,6 @@ const PRIORITY_LABEL: Record<WishItemPriority, string> = {
     medium: "Média",
     high: "Alta",
 };
-
-function formatCurrency(value: number) {
-    return new Intl.NumberFormat('pt-BR', {
-        style: 'currency',
-        currency: 'BRL',
-    }).format(value);
-}
 
 function formatDate(dateString: string) {
     return new Date(dateString).toLocaleDateString('pt-BR');
@@ -219,12 +214,10 @@ export default function PageWishlist() {
                         </Field.Root>
                         <Field.Root invalid={!!errors.estimatedCost}>
                             <Field.Label>Custo Estimado</Field.Label>
-                            <Input
-                                type="number"
-                                step="0.01"
-                                value={estimatedCost || ""}
-                                onChange={(e) => {
-                                    setEstimatedCost(Number(e.target.value));
+                            <MoneyInput
+                                value={estimatedCost}
+                                onValueChange={(value) => {
+                                    setEstimatedCost(value);
                                     if (errors.estimatedCost) setErrors({...errors, estimatedCost: undefined});
                                 }}
                             />

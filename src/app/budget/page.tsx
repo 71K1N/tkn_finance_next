@@ -8,13 +8,8 @@ import { createBudget, getBudgets, removeBudget, updateBudget } from "@/lib/api/
 import { getCategories } from "@/lib/api/category";
 import type { Budget, RolloverPolicy } from "@/lib/types/budget";
 import type { Category } from "@/lib/types/category";
-
-function formatCurrency(value: number) {
-    return new Intl.NumberFormat('pt-BR', {
-        style: 'currency',
-        currency: 'BRL',
-    }).format(value);
-}
+import { formatCurrency } from "@/lib/utils/currency";
+import MoneyInput from "@/components/common/MoneyInput";
 
 export default function PageBudget() {
     const [categoryId, setCategoryId] = useState<string>("");
@@ -218,12 +213,10 @@ export default function PageBudget() {
                         </Field.Root>
                         <Field.Root invalid={!!errors.amount}>
                             <Field.Label>Valor</Field.Label>
-                            <Input
-                                type="number"
-                                step="0.01"
-                                value={amount || ""}
-                                onChange={(e) => {
-                                    setAmount(Number(e.target.value));
+                            <MoneyInput
+                                value={amount}
+                                onValueChange={(value) => {
+                                    setAmount(value);
                                     if (errors.amount) setErrors({...errors, amount: undefined});
                                 }}
                             />

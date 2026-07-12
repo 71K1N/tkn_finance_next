@@ -114,6 +114,7 @@ export default function Sidebar() {
             <Box
                 as="aside"
                 role="group"
+                className="group"
                 position="fixed"
                 top={0}
                 left={0}

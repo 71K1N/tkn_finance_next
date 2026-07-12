@@ -5,6 +5,8 @@ import { Button } from "tikin-ds";
 import { Dialog, Field, Input, Portal, Stack, Text } from "@chakra-ui/react";
 import { payTransaction } from "@/lib/api/transaction";
 import type { Transaction } from "@/lib/types/transaction";
+import { formatCurrency } from "@/lib/utils/currency";
+import MoneyInput from "@/components/common/MoneyInput";
 
 type TransactionPaymentModalProps = {
     transaction: Transaction | null;
@@ -50,7 +52,7 @@ export default function TransactionPaymentModal({ transaction, onClose, onSaved 
                         <Dialog.Body>
                             <Text mb={4}>
                                 <strong>Transação:</strong> {transaction?.name}<br />
-                                <strong>Valor Original:</strong> R$ {transaction?.amount.toFixed(2)}
+                                <strong>Valor Original:</strong> {transaction ? formatCurrency(transaction.amount) : ''}
                             </Text>
                             <Stack gap={4}>
                                 <Field.Root>
@@ -59,11 +61,9 @@ export default function TransactionPaymentModal({ transaction, onClose, onSaved 
                                 </Field.Root>
                                 <Field.Root>
                                     <Field.Label>Valor Pago</Field.Label>
-                                    <Input
-                                        type="number"
-                                        step="0.01"
-                                        value={paidAmount || ""}
-                                        onChange={(e) => setPaidAmount(Number(e.target.value))}
+                                    <MoneyInput
+                                        value={paidAmount}
+                                        onValueChange={setPaidAmount}
                                     />
                                 </Field.Root>
                             </Stack>
