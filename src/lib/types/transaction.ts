@@ -20,6 +20,8 @@ export type TransactionInput = {
     description: string;
     amount: number;
     due_date?: string;
+    payment_date?: string;
+    paid_amount?: number;
     subcategory_id?: string;
     account_id: string;
     target_account_id?: string;
@@ -30,6 +32,15 @@ export type TransactionInput = {
 export type PaymentInput = {
     payment_date?: string;
     paid_amount: number;
+};
+
+export type TransactionFilters = {
+    from?: string;
+    to?: string;
+    type?: TransactionType | "";
+    account_id?: string;
+    category_id?: string;
+    subcategory_id?: string;
 };
 
 export type TransactionSummary = {

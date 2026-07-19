@@ -41,7 +41,7 @@ export default function Home() {
 
         Promise.allSettled([
             getTotalBalance(),
-            getTransactionSummary(month),
+            getTransactionSummary({ month }),
             getSavingsGoals({ page: 1, pageSize: 100 }),
             getCategoryBreakdown(month),
             getMonthlyTrend(6),
@@ -68,7 +68,6 @@ export default function Home() {
 
             <AiInsightsCard />
 
-            {/* Cards Principais */}
             <SimpleGrid columns={{ base: 1, md: 2, lg: 4 }} gap={4} mb={6}>
                 <Card.Root h="full">
                     <Card.Body>

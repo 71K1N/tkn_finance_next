@@ -1,18 +1,20 @@
 "use client"
-import { useEffect, useRef, useState } from "react";
-import { Trash2, Edit, DollarSign, Plus, List, Calendar, Tag } from 'react-feather';
+import { useCallback, useEffect, useRef, useState } from "react";
+import { Trash2, Edit, DollarSign, Plus, List, Calendar, Tag, Filter } from 'react-feather';
 import swal from 'sweetalert';
-import { Button, DataTable, type DataTableColumn, type DataTableAction, type DataTableHandle } from "tikin-ds";
+import { Button, DataTable, type DataTableColumn, type DataTableAction, type DataTableHandle, type DataTableRequestParams } from "tikin-ds";
 import { Box, Card, Container, Flex, HStack, Heading, Text } from "@chakra-ui/react";
 import StatusBadge from "@/components/StatusBadge";
 import TransactionSummaryCards from "@/components/transaction/TransactionSummaryCards";
 import TransactionFormModal from "@/components/transaction/TransactionFormModal";
 import TransactionPaymentModal from "@/components/transaction/TransactionPaymentModal";
+import TransactionFilterModal from "@/components/transaction/TransactionFilterModal";
+import TransactionActiveFiltersBar from "@/components/transaction/TransactionActiveFiltersBar";
 import { getTransactionSummary, getTransactions, removeTransaction } from "@/lib/api/transaction";
 import { getCategories } from "@/lib/api/category";
 import { getSubcategories } from "@/lib/api/subcategory";
 import { getBankAccounts } from "@/lib/api/bank-account";
-import type { Transaction, TransactionSummary } from "@/lib/types/transaction";
+import type { Transaction, TransactionSummary, TransactionFilters } from "@/lib/types/transaction";
 import type { Category } from "@/lib/types/category";
 import type { Subcategory } from "@/lib/types/subcategory";
 import type { BankAccount } from "@/lib/types/bank-account";
@@ -28,6 +30,17 @@ function formatDate(dateString: string | null): string {
     });
 }
 
+function toDateInputValue(date: Date): string {
+    return date.toISOString().slice(0, 10);
+}
+
+function getCurrentMonthRange(): TransactionFilters {
+    const now = new Date();
+    const start = new Date(now.getFullYear(), now.getMonth(), 1);
+    const end = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+    return { from: toDateInputValue(start), to: toDateInputValue(end) };
+}
+
 export default function PageTransaction() {
     const formatCurrency = useFormatCurrency();
     const [loading, setLoading] = useState<boolean>(false);
@@ -40,6 +53,9 @@ export default function PageTransaction() {
     const [formModalOpen, setFormModalOpen] = useState<boolean>(false);
     const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
     const [paymentTarget, setPaymentTarget] = useState<Transaction | null>(null);
+
+    const [filters, setFilters] = useState<TransactionFilters>(() => getCurrentMonthRange());
+    const [filterModalOpen, setFilterModalOpen] = useState<boolean>(false);
 
     const tableRef = useRef<DataTableHandle>(null);
 
@@ -56,16 +72,35 @@ export default function PageTransaction() {
 
     async function loadSummary() {
         try {
-            setSummary(await getTransactionSummary());
+            setSummary(await getTransactionSummary(filters));
         } catch (error) {
             // summary is a secondary indicator; failing to load it shouldn't block the page
         }
     }
 
+    const loadTransactions = useCallback(
+        (params: DataTableRequestParams) => getTransactions({
+            ...params,
+            from: filters.from,
+            to: filters.to,
+            category_id: filters.category_id,
+            filters: {
+                ...params.filters,
+                ...(filters.type && { type: filters.type }),
+                ...(filters.account_id && { account_id: filters.account_id }),
+                ...(filters.subcategory_id && { subcategory_id: filters.subcategory_id }),
+            },
+        }),
+        [filters],
+    );
+
     useEffect(() => {
         loadRelatedData();
-        loadSummary();
     }, []);
+
+    useEffect(() => {
+        loadSummary();
+    }, [filters]);
 
     function categoryName(subcategoryId: string | null) {
         const sub = subcategories.find((s) => s.id === subcategoryId);
@@ -151,16 +186,7 @@ export default function PageTransaction() {
             header: "Conta",
             render: (row) => accountName(row.account_id),
         },
-        {
-            key: "amount",
-            header: "Valor",
-            sortable: true,
-            render: (row) => (
-                <Text color={row.type === 'EXPENSE' ? 'red.solid' : 'green.solid'}>
-                    {formatCurrency(row.amount)}
-                </Text>
-            ),
-        },
+        
         {
             key: "due_date",
             header: "Vencimento",
@@ -177,7 +203,7 @@ export default function PageTransaction() {
             header: "Status",
             sortable: true,
             render: (row) => (
-                <StatusBadge status={row.payment_date ? "success" : "warning"}>
+                <StatusBadge status={row.payment_date ? "success" : "warning"} variant="outline">
                     {row.payment_date ? "Pago" : "Pendente"}
                 </StatusBadge>
             ),
@@ -185,11 +211,21 @@ export default function PageTransaction() {
         {
             key: "type",
             header: "Tipo",
-            filterable: true,
+            sortable: true,
             render: (row) => (
-                <StatusBadge status={row.type === 'EXPENSE' ? "danger" : "success"}>
+                <StatusBadge status={row.type === 'EXPENSE' ? "danger" : "success"} variant="outline">
                     {row.type === 'EXPENSE' ? "Despesa" : "Receita"}
                 </StatusBadge>
+            ),
+        },
+        {
+            key: "amount",
+            header: "Valor",
+            sortable: true,
+            render: (row) => (
+                <Text color={row.type === 'EXPENSE' ? 'red.solid' : 'green.solid'}>
+                    {formatCurrency(row.amount)}
+                </Text>
             ),
         },
     ];
@@ -212,11 +248,25 @@ export default function PageTransaction() {
                     <Heading size="5xl">Transações</Heading>
                     <Text color="fg.muted">Gerencie suas transações financeiras</Text>
                 </Box>
-                <Button colorPalette="primary" onClick={openCreate} disabled={loading}>
-                    <Plus size={16} />
-                    Nova Transação
-                </Button>
+                <HStack gap={2}>
+                    <Button variant="outline" onClick={() => setFilterModalOpen(true)} disabled={loading}>
+                        <Filter size={16} />
+                        Filtros
+                    </Button>
+                    <Button colorPalette="primary" onClick={openCreate} disabled={loading}>
+                        <Plus size={16} />
+                        Nova Transação
+                    </Button>
+                </HStack>
             </Flex>
+
+            <TransactionActiveFiltersBar
+                filters={filters}
+                categories={categories}
+                subcategories={subcategories}
+                accounts={accounts}
+                onClear={() => setFilters(getCurrentMonthRange())}
+            />
 
             <TransactionSummaryCards summary={summary} />
 
@@ -231,7 +281,7 @@ export default function PageTransaction() {
                         searchPlaceholder="Buscar transações..."
                         emptyMessage="Nenhuma transação encontrada"
                         errorMessage="Não foi possível carregar as transações"
-                        onDataLoading={getTransactions}
+                        onDataLoading={loadTransactions}
                     />
                 </Card.Body>
             </Card.Root>
@@ -250,6 +300,17 @@ export default function PageTransaction() {
                 transaction={paymentTarget}
                 onClose={() => setPaymentTarget(null)}
                 onSaved={handleSaved}
+            />
+
+            <TransactionFilterModal
+                open={filterModalOpen}
+                filters={filters}
+                defaultFilters={getCurrentMonthRange()}
+                categories={categories}
+                subcategories={subcategories}
+                accounts={accounts}
+                onClose={() => setFilterModalOpen(false)}
+                onApply={setFilters}
             />
         </Container>
     )

@@ -2,7 +2,7 @@
 import { useEffect, useState } from "react";
 import { Save, X } from 'react-feather';
 import swal from 'sweetalert';
-import { Button } from "tikin-ds";
+import { Button, Radio, RadioGroup, Switch } from "tikin-ds";
 import { Dialog, Field, Input, NativeSelect, Portal, SimpleGrid, Stack } from "@chakra-ui/react";
 import { createTransaction, updateTransaction } from "@/lib/api/transaction";
 import type { Transaction, TransactionType } from "@/lib/types/transaction";
@@ -38,10 +38,13 @@ export default function TransactionFormModal({
     const [subcategoryId, setSubcategoryId] = useState<string>("");
     const [accountId, setAccountId] = useState<string>("");
     const [type, setType] = useState<TransactionType>('EXPENSE');
+    const [paidToday, setPaidToday] = useState<boolean>(false);
     const [loading, setLoading] = useState<boolean>(false);
 
     useEffect(() => {
         if (!open) return;
+
+        setPaidToday(false);
 
         if (transaction) {
             setName(transaction.name);
@@ -81,11 +84,14 @@ export default function TransactionFormModal({
     async function store() {
         setLoading(true);
         try {
+            const todayISO = new Date().toISOString().slice(0, 10);
             await createTransaction({
                 name,
                 description,
                 amount,
-                due_date: dueDate,
+                due_date: paidToday ? todayISO : dueDate,
+                payment_date: paidToday ? todayISO : undefined,
+                paid_amount: paidToday ? amount : undefined,
                 subcategory_id: subcategoryId || undefined,
                 account_id: accountId,
                 type,
@@ -105,11 +111,14 @@ export default function TransactionFormModal({
         if (!transaction) return;
         setLoading(true);
         try {
+            const todayISO = new Date().toISOString().slice(0, 10);
             await updateTransaction(transaction.id, {
                 name,
                 description,
                 amount,
-                due_date: dueDate,
+                due_date: paidToday ? todayISO : dueDate,
+                payment_date: paidToday ? todayISO : undefined,
+                paid_amount: paidToday ? amount : undefined,
                 subcategory_id: subcategoryId || undefined,
                 account_id: accountId,
                 type,
@@ -153,22 +162,30 @@ export default function TransactionFormModal({
                                         onValueChange={setAmount}
                                     />
                                 </Field.Root>
-                                <Field.Root>
-                                    <Field.Label>Data Vencimento</Field.Label>
-                                    <Input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} />
-                                </Field.Root>
+                                {!paidToday && (
+                                    <Field.Root>
+                                        <Field.Label>Data Vencimento</Field.Label>
+                                        <Input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} />
+                                    </Field.Root>
+                                )}
                             </SimpleGrid>
+
+                            <Switch
+                                mt={4}
+                                checked={paidToday}
+                                onCheckedChange={(e) => setPaidToday(e.checked)}
+                                label={type === 'INCOME' ? 'Já foi recebida hoje' : 'Já foi paga hoje'}
+                            />
 
                             <SimpleGrid columns={{ base: 1, md: 2 }} gap={4} mt={4}>
                                 <Field.Root>
                                     <Field.Label>Tipo</Field.Label>
-                                    <NativeSelect.Root>
-                                        <NativeSelect.Field value={type} onChange={(e) => setType(e.target.value as TransactionType)}>
-                                            <option value="EXPENSE">Despesa</option>
-                                            <option value="INCOME">Receita</option>
-                                        </NativeSelect.Field>
-                                        <NativeSelect.Indicator />
-                                    </NativeSelect.Root>
+                                    <RadioGroup value={type} onValueChange={(e) => setType(e.value as TransactionType)}>
+                                        <Stack direction="row" gap={4}>
+                                            <Radio value="EXPENSE" label="Despesa" />
+                                            <Radio value="INCOME" label="Receita" />
+                                        </Stack>
+                                    </RadioGroup>
                                 </Field.Root>
                                 <Field.Root>
                                     <Field.Label>Conta</Field.Label>
