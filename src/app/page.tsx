@@ -104,7 +104,7 @@ export default function Home() {
                                 </Stack>
                             </Box>
                         </Flex>
-                        <Text fontSize="sm" color="fg.muted">Receitas e despesas do mês</Text>
+                        <Text fontSize="sm" color="fg.muted">Já pago/recebido no mês (pode diferir do total em Transações, que inclui pendentes)</Text>
                     </Card.Body>
                 </Card.Root>
 

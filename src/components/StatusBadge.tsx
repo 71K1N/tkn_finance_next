@@ -1,4 +1,4 @@
-import { Badge, type DsBadgeProps } from "tikin-ds";
+import { Badge, type DsBadgeProps } from "tikin-uai";
 
 export type BadgeStatus = "success" | "danger" | "warning" | "info" | "primary" | "neutral";
 

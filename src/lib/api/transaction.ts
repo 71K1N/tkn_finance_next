@@ -9,7 +9,7 @@ import type {
     MonthlyTrendEntry,
     BalanceEvolutionEntry,
 } from "@/lib/types/transaction";
-import type { DataTableRequestParams, DataTableResponse } from "tikin-ds";
+import type { DataTableRequestParams, DataTableResponse } from "tikin-uai";
 
 const BASE_PATH = "/transaction";
 

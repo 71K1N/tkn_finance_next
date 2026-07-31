@@ -3,7 +3,7 @@ import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ExternalLink, Save, X, Archive } from 'react-feather';
 import swal from 'sweetalert';
-import { Button, DataTable, type DataTableColumn, type DataTableAction, type DataTableHandle } from "tikin-ds";
+import { Button, DataTable, type DataTableColumn, type DataTableAction, type DataTableHandle } from "tikin-uai";
 import { Box, Card, Container, Field, Heading, Input, SimpleGrid, Stack, Text } from "@chakra-ui/react";
 import StatusBadge from "@/components/StatusBadge";
 import { archiveExpenseGroup, createExpenseGroup, getExpenseGroups } from "@/lib/api/shared-expense-group";

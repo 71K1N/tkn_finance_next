@@ -2,8 +2,8 @@
 import { useEffect, useRef, useState } from "react";
 import { Edit, Trash2, Save, X } from 'react-feather';
 import swal from 'sweetalert';
-import { Button, DataTable, type DataTableColumn, type DataTableAction, type DataTableHandle } from "tikin-ds";
-import { Box, Card, Container, Field, Heading, Input, NativeSelect, Progress, SimpleGrid, Stack, Text } from "@chakra-ui/react";
+import { Button, DataTable, PageHeader, type DataTableColumn, type DataTableAction, type DataTableHandle } from "tikin-uai";
+import { Card, Container, Field, Input, NativeSelect, Progress, SimpleGrid, Stack, Text } from "@chakra-ui/react";
 import { createBudget, getBudgets, removeBudget, updateBudget } from "@/lib/api/budget";
 import { getCategories } from "@/lib/api/category";
 import type { Budget, RolloverPolicy } from "@/lib/types/budget";
@@ -172,10 +172,7 @@ export default function PageBudget() {
 
     return (
         <Container maxW="6xl" py={8}>
-            <Box mb={6}>
-                <Heading size="5xl">Orçamentos</Heading>
-                <Text color="fg.muted">Gerencie seus orçamentos mensais por categoria</Text>
-            </Box>
+            <PageHeader title="Orçamentos" subtitle="Gerencie seus orçamentos mensais por categoria" mb={6} />
 
             <Card.Root mb={6}>
                 <Card.Body>

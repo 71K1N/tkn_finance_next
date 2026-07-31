@@ -2,8 +2,8 @@
 import { useRef, useState } from "react";
 import { Edit, Trash2, Save, X } from 'react-feather';
 import swal from 'sweetalert';
-import { Button, DataTable, type DataTableColumn, type DataTableAction, type DataTableHandle } from "tikin-ds";
-import { Box, Card, Container, Field, Heading, Input, NativeSelect, SimpleGrid, Stack, Text } from "@chakra-ui/react";
+import { Button, DataTable, PageHeader, type DataTableColumn, type DataTableAction, type DataTableHandle } from "tikin-uai";
+import { Card, Container, Field, Input, NativeSelect, SimpleGrid, Stack } from "@chakra-ui/react";
 import StatusBadge from "@/components/StatusBadge";
 import { createWishItem, getWishItems, removeWishItem, updateWishItem, updateWishItemStatus } from "@/lib/api/wish-item";
 import type { WishItem, WishItemPriority, WishItemStatus } from "@/lib/types/wish-item";
@@ -193,10 +193,7 @@ export default function PageWishlist() {
 
     return (
         <Container maxW="6xl" py={8}>
-            <Box mb={6}>
-                <Heading size="5xl">Lista de Desejos</Heading>
-                <Text color="fg.muted">Gerencie seus itens de desejo e acompanhe o progresso</Text>
-            </Box>
+            <PageHeader title="Lista de Desejos" subtitle="Gerencie seus itens de desejo e acompanhe o progresso" mb={6} />
 
             <Card.Root mb={6}>
                 <Card.Body>

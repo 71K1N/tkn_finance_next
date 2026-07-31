@@ -1,7 +1,7 @@
 "use client";
 
 import { ChakraProvider } from "@chakra-ui/react";
-import { system } from "tikin-ds";
+import { system } from "tikin-uai";
 import { HideValuesProvider } from "@/contexts/HideValuesContext";
 
 export default function Providers({ children }: { children: React.ReactNode }) {

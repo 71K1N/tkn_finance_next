@@ -2,8 +2,8 @@
 import { useRef, useState } from "react";
 import { Edit, Trash2, Save, X, ArrowDownCircle, ArrowUpCircle } from 'react-feather';
 import swal from 'sweetalert';
-import { Button, DataTable, type DataTableColumn, type DataTableAction, type DataTableHandle } from "tikin-ds";
-import { Box, Card, Container, Dialog, Field, Heading, Input, Portal, Progress, SimpleGrid, Stack, Text } from "@chakra-ui/react";
+import { Button, DataTable, PageHeader, type DataTableColumn, type DataTableAction, type DataTableHandle } from "tikin-uai";
+import { Card, Container, Dialog, Field, Input, Portal, Progress, SimpleGrid, Stack, Text } from "@chakra-ui/react";
 import {
     createSavingsGoal,
     depositSavingsGoal,
@@ -197,10 +197,7 @@ export default function PageSavingsGoal() {
 
     return (
         <Container maxW="6xl" py={8}>
-            <Box mb={6}>
-                <Heading size="5xl">Metas de Poupança</Heading>
-                <Text color="fg.muted">Gerencie suas metas de poupança e acompanhe o progresso</Text>
-            </Box>
+            <PageHeader title="Metas de Poupança" subtitle="Gerencie suas metas de poupança e acompanhe o progresso" mb={6} />
 
             <Card.Root mb={6}>
                 <Card.Body>

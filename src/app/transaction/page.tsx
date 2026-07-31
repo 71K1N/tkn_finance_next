@@ -2,8 +2,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Trash2, Edit, DollarSign, Plus, List, Calendar, Tag, Filter } from 'react-feather';
 import swal from 'sweetalert';
-import { Button, DataTable, type DataTableColumn, type DataTableAction, type DataTableHandle, type DataTableRequestParams } from "tikin-ds";
-import { Box, Card, Container, Flex, HStack, Heading, Text } from "@chakra-ui/react";
+import { Button, DataTable, PageHeader, type DataTableColumn, type DataTableAction, type DataTableHandle, type DataTableRequestParams } from "tikin-uai";
+import { Card, Container, HStack, Text } from "@chakra-ui/react";
 import StatusBadge from "@/components/StatusBadge";
 import TransactionSummaryCards from "@/components/transaction/TransactionSummaryCards";
 import TransactionFormModal from "@/components/transaction/TransactionFormModal";
@@ -22,7 +22,7 @@ import { useFormatCurrency } from "@/lib/hooks/useFormatCurrency";
 
 function formatDate(dateString: string | null): string {
     if (!dateString) return "N/A";
-    const [year, month, day] = dateString.split('-').map(Number);
+    const [year, month, day] = dateString.split('T')[0].split('-').map(Number);
     return new Date(year, month - 1, day).toLocaleDateString('pt-BR', {
         year: 'numeric',
         month: '2-digit',
@@ -200,8 +200,18 @@ export default function PageTransaction() {
         },
         {
             key: "payment_date",
-            header: "Status",
+            header: "Data de Pagamento",
             sortable: true,
+            render: (row) => (
+                <HStack gap={2}>
+                    <Calendar size={16} />
+                    <Text>{formatDate(row.payment_date)}</Text>
+                </HStack>
+            ),
+        },
+        {
+            key: "status",
+            header: "Status",
             render: (row) => (
                 <StatusBadge status={row.payment_date ? "success" : "warning"} variant="outline">
                     {row.payment_date ? "Pago" : "Pendente"}
@@ -243,22 +253,23 @@ export default function PageTransaction() {
 
     return (
         <Container maxW="6xl" py={8}>
-            <Flex justify="space-between" align="center" mb={6}>
-                <Box>
-                    <Heading size="5xl">Transações</Heading>
-                    <Text color="fg.muted">Gerencie suas transações financeiras</Text>
-                </Box>
-                <HStack gap={2}>
-                    <Button variant="outline" onClick={() => setFilterModalOpen(true)} disabled={loading}>
-                        <Filter size={16} />
-                        Filtros
-                    </Button>
-                    <Button colorPalette="primary" onClick={openCreate} disabled={loading}>
-                        <Plus size={16} />
-                        Nova Transação
-                    </Button>
-                </HStack>
-            </Flex>
+            <PageHeader
+                title="Transações"
+                subtitle="Gerencie suas transações financeiras"
+                mb={6}
+                actions={
+                    <HStack gap={2}>
+                        <Button variant="outline" onClick={() => setFilterModalOpen(true)} disabled={loading}>
+                            <Filter size={16} />
+                            Filtros
+                        </Button>
+                        <Button colorPalette="primary" onClick={openCreate} disabled={loading}>
+                            <Plus size={16} />
+                            Nova Transação
+                        </Button>
+                    </HStack>
+                }
+            />
 
             <TransactionActiveFiltersBar
                 filters={filters}
@@ -282,6 +293,7 @@ export default function PageTransaction() {
                         emptyMessage="Nenhuma transação encontrada"
                         errorMessage="Não foi possível carregar as transações"
                         onDataLoading={loadTransactions}
+                        pageSizeOptions={[5, 10, 25, 50]}
                     />
                 </Card.Body>
             </Card.Root>

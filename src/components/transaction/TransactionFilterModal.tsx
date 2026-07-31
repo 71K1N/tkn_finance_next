@@ -1,7 +1,7 @@
 "use client"
 import { useEffect, useState } from "react";
 import { Filter, X } from 'react-feather';
-import { Button, RadioGroup, Radio } from "tikin-ds";
+import { Button, RadioGroup, Radio } from "tikin-uai";
 import { Dialog, Field, Input, NativeSelect, Portal, SimpleGrid, Stack } from "@chakra-ui/react";
 import type { TransactionFilters, TransactionType } from "@/lib/types/transaction";
 import type { Category } from "@/lib/types/category";

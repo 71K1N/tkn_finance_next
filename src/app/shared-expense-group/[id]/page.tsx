@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { ArrowLeft, Save, Trash2, UserMinus, UserPlus, X } from 'react-feather';
 import swal from 'sweetalert';
-import { Button, DataTable, type DataTableColumn, type DataTableAction, type DataTableHandle } from "tikin-ds";
+import { Button, DataTable, type DataTableColumn, type DataTableAction, type DataTableHandle } from "tikin-uai";
 import {
     Box,
     Card,

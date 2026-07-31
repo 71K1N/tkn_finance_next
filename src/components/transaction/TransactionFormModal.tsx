@@ -2,7 +2,7 @@
 import { useEffect, useState } from "react";
 import { Save, X } from 'react-feather';
 import swal from 'sweetalert';
-import { Button, Radio, RadioGroup, Switch } from "tikin-ds";
+import { Button, Radio, RadioGroup, Switch } from "tikin-uai";
 import { Dialog, Field, Input, NativeSelect, Portal, SimpleGrid, Stack } from "@chakra-ui/react";
 import { createTransaction, updateTransaction } from "@/lib/api/transaction";
 import type { Transaction, TransactionType } from "@/lib/types/transaction";

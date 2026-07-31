@@ -2,8 +2,8 @@
 import { useRef, useState } from "react";
 import { Edit, Trash2, Save, X } from 'react-feather';
 import swal from 'sweetalert';
-import { Button, DataTable, type DataTableColumn, type DataTableAction, type DataTableHandle } from "tikin-ds";
-import { Box, Card, Container, Field, Heading, Input, SimpleGrid, Stack, Text } from "@chakra-ui/react";
+import { Button, DataTable, PageHeader, type DataTableColumn, type DataTableAction, type DataTableHandle } from "tikin-uai";
+import { Card, Container, Field, Input, SimpleGrid, Stack } from "@chakra-ui/react";
 import { createCategory, getCategories, removeCategory, updateCategory } from "@/lib/api/category";
 import type { Category } from "@/lib/types/category";
 
@@ -118,10 +118,7 @@ export default function PageCategory() {
 
     return (
         <Container maxW="6xl" py={8}>
-            <Box mb={6}>
-                <Heading size="5xl">Categorias</Heading>
-                <Text color="fg.muted">Gerencie suas categorias de forma simples e eficiente</Text>
-            </Box>
+            <PageHeader title="Categorias" subtitle="Gerencie suas categorias de forma simples e eficiente" mb={6} />
 
             <Card.Root mb={6}>
                 <Card.Body>

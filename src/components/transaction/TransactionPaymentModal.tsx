@@ -1,7 +1,7 @@
 "use client"
 import { useEffect, useState } from "react";
 import swal from 'sweetalert';
-import { Button } from "tikin-ds";
+import { Button } from "tikin-uai";
 import { Dialog, Field, Input, Portal, Stack, Text } from "@chakra-ui/react";
 import { payTransaction } from "@/lib/api/transaction";
 import type { Transaction } from "@/lib/types/transaction";

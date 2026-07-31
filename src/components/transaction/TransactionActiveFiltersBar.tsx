@@ -1,7 +1,7 @@
 "use client"
 import { X } from 'react-feather';
 import { HStack, Text } from "@chakra-ui/react";
-import { Button } from "tikin-ds";
+import { Button } from "tikin-uai";
 import StatusBadge from "@/components/StatusBadge";
 import type { TransactionFilters } from "@/lib/types/transaction";
 import type { Category } from "@/lib/types/category";
