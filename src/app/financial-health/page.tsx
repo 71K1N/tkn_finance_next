@@ -7,6 +7,7 @@ import DashboardTrendChart, { TrendMonth } from "@/components/dashboard/Dashboar
 import UpcomingTransactionsCard, { UpcomingTransaction } from "@/components/dashboard/UpcomingTransactionsCard";
 import AddTransactionAction from "@/components/dashboard/AddTransactionAction";
 import { useFormatCurrency } from "@/lib/hooks/useFormatCurrency";
+import { formatDateBR, todayLocalISO } from "@/lib/utils/date";
 
 interface Transaction {
     id?: number;
@@ -33,13 +34,6 @@ const AUTH_HEADERS = {
     'Authorization': `Bearer ${process.env.NEXT_PUBLIC_AUTH_TOKEN ?? "1"}`,
 };
 
-function formatDate(dateString: string): string {
-    const [year, month, day] = dateString.split('-').map(Number);
-    return new Date(year, month - 1, day).toLocaleDateString('pt-BR', {
-        year: 'numeric', month: '2-digit', day: '2-digit'
-    });
-}
-
 function getLastThreeMonths(): { year: number; month: number; label: string }[] {
     const now = new Date();
     return [2, 1, 0].map((offset) => {
@@ -53,7 +47,7 @@ function getLastThreeMonths(): { year: number; month: number; label: string }[] 
 }
 
 function computeMetrics(transactions: Transaction[]): DashboardMetrics {
-    const today = new Date().toISOString().split('T')[0];
+    const today = todayLocalISO();
 
     const debtBalance = transactions
         .filter(t => t.type === 'EXPENSE' && !t.payment_date)
@@ -186,7 +180,7 @@ export default function FinancialDashboard() {
                             <UpcomingTransactionsCard
                                 transactions={metrics.upcoming}
                                 formatCurrency={formatCurrency}
-                                formatDate={formatDate}
+                                formatDate={(date) => formatDateBR(date)}
                             />
                         </Box>
                     </SimpleGrid>

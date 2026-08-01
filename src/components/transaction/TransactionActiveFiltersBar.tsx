@@ -7,6 +7,7 @@ import type { TransactionFilters } from "@/lib/types/transaction";
 import type { Category } from "@/lib/types/category";
 import type { Subcategory } from "@/lib/types/subcategory";
 import type { BankAccount } from "@/lib/types/bank-account";
+import { formatDateBR } from "@/lib/utils/date";
 
 type TransactionActiveFiltersBarProps = {
     filters: TransactionFilters;
@@ -15,15 +16,6 @@ type TransactionActiveFiltersBarProps = {
     accounts: BankAccount[];
     onClear: () => void;
 };
-
-function formatDate(dateString: string): string {
-    const [year, month, day] = dateString.split('-').map(Number);
-    return new Date(year, month - 1, day).toLocaleDateString('pt-BR', {
-        year: 'numeric',
-        month: '2-digit',
-        day: '2-digit',
-    });
-}
 
 export default function TransactionActiveFiltersBar({
     filters,
@@ -51,7 +43,7 @@ export default function TransactionActiveFiltersBar({
 
             {filters.from && filters.to && (
                 <StatusBadge status="info" variant="outline">
-                    Período: {formatDate(filters.from)} – {formatDate(filters.to)}
+                    Período: {formatDateBR(filters.from)} – {formatDateBR(filters.to)}
                 </StatusBadge>
             )}
 

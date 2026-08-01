@@ -27,7 +27,6 @@ export type TransactionInput = {
     account_id: string;
     target_account_id?: string;
     type: TransactionType;
-    user_id?: number;
 };
 
 export type PaymentInput = {

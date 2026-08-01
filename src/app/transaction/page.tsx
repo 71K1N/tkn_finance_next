@@ -19,27 +19,8 @@ import type { Category } from "@/lib/types/category";
 import type { Subcategory } from "@/lib/types/subcategory";
 import type { BankAccount } from "@/lib/types/bank-account";
 import { useFormatCurrency } from "@/lib/hooks/useFormatCurrency";
-
-function formatDate(dateString: string | null): string {
-    if (!dateString) return "N/A";
-    const [year, month, day] = dateString.split('T')[0].split('-').map(Number);
-    return new Date(year, month - 1, day).toLocaleDateString('pt-BR', {
-        year: 'numeric',
-        month: '2-digit',
-        day: '2-digit',
-    });
-}
-
-function toDateInputValue(date: Date): string {
-    return date.toISOString().slice(0, 10);
-}
-
-function getCurrentMonthRange(): TransactionFilters {
-    const now = new Date();
-    const start = new Date(now.getFullYear(), now.getMonth(), 1);
-    const end = new Date(now.getFullYear(), now.getMonth() + 1, 0);
-    return { from: toDateInputValue(start), to: toDateInputValue(end) };
-}
+import { currentMonthRange, formatDateBR } from "@/lib/utils/date";
+import { getErrorMessage } from "@/lib/utils/api-error";
 
 export default function PageTransaction() {
     const formatCurrency = useFormatCurrency();
@@ -55,7 +36,7 @@ export default function PageTransaction() {
     const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
     const [paymentTarget, setPaymentTarget] = useState<Transaction | null>(null);
 
-    const [filters, setFilters] = useState<TransactionFilters>(() => getCurrentMonthRange());
+    const [filters, setFilters] = useState<TransactionFilters>(() => currentMonthRange());
     const [filterModalOpen, setFilterModalOpen] = useState<boolean>(false);
 
     const tableRef = useRef<DataTableHandle>(null);
@@ -107,6 +88,18 @@ export default function PageTransaction() {
         loadRelatedData();
     }, []);
 
+    // The initializer above also runs during prerender, where "now" is the container's
+    // clock (UTC) rather than the user's. They only disagree late in the evening on the
+    // last day of a month — when they do, adopt the browser's range and refetch.
+    useEffect(() => {
+        const clientRange = currentMonthRange();
+        setFilters((current) =>
+            current.from === clientRange.from && current.to === clientRange.to
+                ? current
+                : { ...current, ...clientRange },
+        );
+    }, []);
+
     useEffect(() => {
         loadSummary();
     }, [filters]);
@@ -151,7 +144,11 @@ export default function PageTransaction() {
                     tableRef.current?.refetch();
                     loadSummary();
                 } catch (error) {
-                    swal("Erro!", "Não foi possível excluir a transação", "error");
+                    const message = getErrorMessage(error, "Não foi possível excluir a transação", {
+                        404: "Transação não encontrada. Ela pode já ter sido excluída.",
+                    });
+                    swal("Erro!", message, "error");
+                    tableRef.current?.refetch();
                 } finally {
                     setLoading(false);
                 }
@@ -203,7 +200,7 @@ export default function PageTransaction() {
             render: (row) => (
                 <HStack gap={2}>
                     <Calendar size={16} />
-                    <Text>{formatDate(row.due_date)}</Text>
+                    <Text>{formatDateBR(row.due_date)}</Text>
                 </HStack>
             ),
         },
@@ -214,7 +211,7 @@ export default function PageTransaction() {
             render: (row) => (
                 <HStack gap={2}>
                     <Calendar size={16} />
-                    <Text>{formatDate(row.payment_date)}</Text>
+                    <Text>{formatDateBR(row.payment_date)}</Text>
                 </HStack>
             ),
         },
@@ -295,7 +292,7 @@ export default function PageTransaction() {
                 categories={categories}
                 subcategories={subcategories}
                 accounts={accounts}
-                onClear={() => setFilters(getCurrentMonthRange())}
+                onClear={() => setFilters(currentMonthRange())}
             />
 
             <TransactionSummaryCards summary={summary} plannedVsUnplanned={plannedVsUnplanned} />
@@ -337,7 +334,7 @@ export default function PageTransaction() {
             <TransactionFilterModal
                 open={filterModalOpen}
                 filters={filters}
-                defaultFilters={getCurrentMonthRange()}
+                defaultFilters={currentMonthRange()}
                 categories={categories}
                 subcategories={subcategories}
                 accounts={accounts}

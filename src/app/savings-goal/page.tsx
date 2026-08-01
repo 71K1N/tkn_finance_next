@@ -14,6 +14,7 @@ import {
 } from "@/lib/api/savings-goal";
 import type { SavingsGoal } from "@/lib/types/savings-goal";
 import { useFormatCurrency } from "@/lib/hooks/useFormatCurrency";
+import { formatDateBR } from "@/lib/utils/date";
 import MoneyInput from "@/components/common/MoneyInput";
 
 export default function PageSavingsGoal() {
@@ -184,7 +185,7 @@ export default function PageSavingsGoal() {
             key: "projectedCompletionDate",
             header: "Previsão de Conclusão",
             sortable: true,
-            render: (row) => (row.projectedCompletionDate ? new Date(row.projectedCompletionDate).toLocaleDateString('pt-BR') : "—"),
+            render: (row) => formatDateBR(row.projectedCompletionDate, { year: 'numeric', month: '2-digit', day: '2-digit' }, "—"),
         },
     ];
 

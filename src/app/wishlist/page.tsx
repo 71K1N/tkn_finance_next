@@ -9,6 +9,7 @@ import { createWishItem, getWishItems, removeWishItem, updateWishItem, updateWis
 import type { WishItem, WishItemPriority, WishItemStatus } from "@/lib/types/wish-item";
 import { useFormatCurrency } from "@/lib/hooks/useFormatCurrency";
 import MoneyInput from "@/components/common/MoneyInput";
+import { formatDateBR } from "@/lib/utils/date";
 
 const STATUS_LABEL: Record<WishItemStatus, string> = {
     active: "Ativo",
@@ -29,10 +30,6 @@ const PRIORITY_LABEL: Record<WishItemPriority, string> = {
     medium: "Média",
     high: "Alta",
 };
-
-function formatDate(dateString: string) {
-    return new Date(dateString).toLocaleDateString('pt-BR');
-}
 
 export default function PageWishlist() {
     const formatCurrency = useFormatCurrency();
@@ -158,7 +155,7 @@ export default function PageWishlist() {
             key: "targetDate",
             header: "Data Alvo",
             sortable: true,
-            render: (row) => formatDate(row.targetDate),
+            render: (row) => formatDateBR(row.targetDate),
         },
         {
             key: "priority",

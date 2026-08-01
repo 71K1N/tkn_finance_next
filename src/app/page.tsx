@@ -14,13 +14,10 @@ import type { CategoryBreakdown, MonthlyTrendEntry, BalanceEvolutionEntry, Trans
 import type { SavingsGoal } from "@/lib/types/savings-goal";
 import AiInsightsCard from "@/components/dashboard/AiInsightsCard";
 import { useFormatCurrency } from "@/lib/hooks/useFormatCurrency";
+import { currentMonthLocal } from "@/lib/utils/date";
 
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8', '#82CA9D', '#FF6B6B'];
 const SAVINGS_RATE_TARGET = 20;
-
-function currentMonthString() {
-    return new Date().toISOString().slice(0, 7);
-}
 
 function calculateProgress(current: number, target: number) {
     if (target <= 0) return 0;
@@ -32,12 +29,14 @@ export default function Home() {
     const [totalBalance, setTotalBalance] = useState(0);
     const [summary, setSummary] = useState<TransactionSummary>({ totalIncome: 0, totalExpenses: 0, balance: 0 });
     const [savingsGoals, setSavingsGoals] = useState<SavingsGoal[]>([]);
-    const [categoryBreakdown, setCategoryBreakdown] = useState<CategoryBreakdown>({ month: currentMonthString(), categories: [] });
+    // Left empty on the server: prerendering runs in the container's timezone (UTC), which
+    // disagrees with the browser's about which month it is. The month is resolved on mount.
+    const [categoryBreakdown, setCategoryBreakdown] = useState<CategoryBreakdown>({ month: "", categories: [] });
     const [monthlyTrend, setMonthlyTrend] = useState<MonthlyTrendEntry[]>([]);
     const [balanceEvolution, setBalanceEvolution] = useState<BalanceEvolutionEntry[]>([]);
 
     useEffect(() => {
-        const month = currentMonthString();
+        const month = currentMonthLocal();
 
         Promise.allSettled([
             getTotalBalance(),

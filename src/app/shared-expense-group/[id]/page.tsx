@@ -44,6 +44,7 @@ import type {
 } from "@/lib/types/shared-expense-group";
 import { useFormatCurrency } from "@/lib/hooks/useFormatCurrency";
 import MoneyInput from "@/components/common/MoneyInput";
+import { formatDateBR } from "@/lib/utils/date";
 
 function MembersTab({ group, onChanged }: { group: ExpenseGroup; onChanged: () => void }) {
     const formatCurrency = useFormatCurrency();
@@ -247,7 +248,7 @@ function ExpensesTab({ group }: { group: ExpenseGroup }) {
         { key: "description", header: "Descrição", sortable: true },
         { key: "amount", header: "Valor", sortable: true, render: (row) => formatCurrency(row.amount) },
         { key: "paid_by", header: "Pago por" },
-        { key: "expense_date", header: "Data", render: (row) => new Date(row.expense_date).toLocaleDateString('pt-BR') },
+        { key: "expense_date", header: "Data", render: (row) => formatDateBR(row.expense_date) },
         { key: "status", header: "Status", render: (row) => <StatusBadge status={row.status === "active" ? "success" : "neutral"}>{row.status === "active" ? "Ativa" : "Anulada"}</StatusBadge> },
     ];
 
@@ -360,7 +361,7 @@ function BalancesTab({ group }: { group: ExpenseGroup }) {
         { key: "to_user_id", header: "Para" },
         { key: "amount", header: "Valor", render: (row) => formatCurrency(row.amount) },
         { key: "note", header: "Nota", render: (row) => row.note ?? "-" },
-        { key: "settled_at", header: "Data", render: (row) => new Date(row.settled_at).toLocaleDateString('pt-BR') },
+        { key: "settled_at", header: "Data", render: (row) => formatDateBR(row.settled_at) },
     ];
 
     return (

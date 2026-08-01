@@ -10,6 +10,8 @@ import type { Category } from "@/lib/types/category";
 import type { Subcategory } from "@/lib/types/subcategory";
 import type { BankAccount } from "@/lib/types/bank-account";
 import MoneyInput from "@/components/common/MoneyInput";
+import { todayLocalISO } from "@/lib/utils/date";
+import { getErrorMessage } from "@/lib/utils/api-error";
 
 type TransactionFormModalProps = {
     open: boolean;
@@ -52,6 +54,7 @@ export default function TransactionFormModal({
             setDescription(transaction.description);
             setAmount(transaction.amount);
             setDueDate(transaction.due_date ?? "");
+            setIsBill(!!transaction.due_date);
             setSubcategoryId(transaction.subcategory_id ?? "");
             const sub = subcategories.find((s) => s.id === transaction.subcategory_id);
             setCategoryId(sub?.categoryId ?? "");
@@ -62,6 +65,7 @@ export default function TransactionFormModal({
             setDescription("");
             setAmount(0);
             setDueDate("");
+            setIsBill(true);
             setCategoryId("");
             setSubcategoryId("");
             setAccountId("");
@@ -85,8 +89,8 @@ export default function TransactionFormModal({
     async function store() {
         setLoading(true);
         try {
-            const todayISO = new Date().toISOString().slice(0, 10);
-            const computedDueDate = paidToday ? todayISO : (isBill ? dueDate : "");
+            const todayISO = todayLocalISO();
+            const computedDueDate = paidToday ? undefined : (isBill ? (dueDate || undefined) : undefined);
             await createTransaction({
                 name,
                 description,
@@ -97,13 +101,16 @@ export default function TransactionFormModal({
                 subcategory_id: subcategoryId || undefined,
                 account_id: accountId,
                 type,
-                user_id: 1,
             });
             swal("Sucesso!", "Transação criada com sucesso!", "success");
             onSaved();
             onClose();
         } catch (error) {
-            swal("Erro!", "Não foi possível criar a transação", "error");
+            const message = getErrorMessage(error, "Não foi possível criar a transação", {
+                400: "Dados inválidos. Verifique os campos e tente novamente.",
+                404: "Conta ou subcategoria não encontrada.",
+            });
+            swal("Erro!", message, "error");
         } finally {
             setLoading(false);
         }
@@ -113,8 +120,8 @@ export default function TransactionFormModal({
         if (!transaction) return;
         setLoading(true);
         try {
-            const todayISO = new Date().toISOString().slice(0, 10);
-            const computedDueDate = paidToday ? todayISO : (isBill ? dueDate : "");
+            const todayISO = todayLocalISO();
+            const computedDueDate = paidToday ? todayISO : (isBill ? (dueDate || undefined) : undefined);
             await updateTransaction(transaction.id, {
                 name,
                 description,
@@ -130,7 +137,11 @@ export default function TransactionFormModal({
             onSaved();
             onClose();
         } catch (error) {
-            swal("Erro!", "Não foi possível atualizar a transação", "error");
+            const message = getErrorMessage(error, "Não foi possível atualizar a transação", {
+                400: "Dados inválidos. Verifique os campos e tente novamente.",
+                404: "Transação não encontrada. Ela pode ter sido excluída.",
+            });
+            swal("Erro!", message, "error");
         } finally {
             setLoading(false);
         }
