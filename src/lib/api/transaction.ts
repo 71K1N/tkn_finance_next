@@ -24,3 +24,4 @@ export const getTransactionSummary = (params?: Partial<TransactionFilters> & { m
 export const getCategoryBreakdown = (month?: string) => http.get<CategoryBreakdown>(`${BASE_PATH}/category-breakdown`, month ? { month } : undefined);
 export const getMonthlyTrend = (months?: number) => http.get<MonthlyTrendEntry[]>(`${BASE_PATH}/monthly-trend`, months ? { months } : undefined);
 export const getBalanceEvolution = (months?: number) => http.get<BalanceEvolutionEntry[]>(`${BASE_PATH}/balance-evolution`, months ? { months } : undefined);
+export const getPlannedVsUnplanned = (month?: string) => http.get<{ month: string; planned: { total: number; count: number }; unplanned: { total: number; count: number } }>(`${BASE_PATH}/analysis/planned-vs-unplanned`, month ? { month } : undefined);

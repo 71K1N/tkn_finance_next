@@ -12,6 +12,7 @@ export type Transaction = {
     target_account_id: string | null;
     paid_amount: number | null;
     type: TransactionType;
+    is_planned?: boolean;
     user_id: number;
 };
 
@@ -41,6 +42,7 @@ export type TransactionFilters = {
     account_id?: string;
     category_id?: string;
     subcategory_id?: string;
+    is_planned?: string;
 };
 
 export type TransactionSummary = {

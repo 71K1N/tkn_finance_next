@@ -39,6 +39,7 @@ export default function TransactionFormModal({
     const [accountId, setAccountId] = useState<string>("");
     const [type, setType] = useState<TransactionType>('EXPENSE');
     const [paidToday, setPaidToday] = useState<boolean>(false);
+    const [isBill, setIsBill] = useState<boolean>(true);
     const [loading, setLoading] = useState<boolean>(false);
 
     useEffect(() => {
@@ -85,11 +86,12 @@ export default function TransactionFormModal({
         setLoading(true);
         try {
             const todayISO = new Date().toISOString().slice(0, 10);
+            const computedDueDate = paidToday ? todayISO : (isBill ? dueDate : "");
             await createTransaction({
                 name,
                 description,
                 amount,
-                due_date: paidToday ? todayISO : dueDate,
+                due_date: computedDueDate,
                 payment_date: paidToday ? todayISO : undefined,
                 paid_amount: paidToday ? amount : undefined,
                 subcategory_id: subcategoryId || undefined,
@@ -112,11 +114,12 @@ export default function TransactionFormModal({
         setLoading(true);
         try {
             const todayISO = new Date().toISOString().slice(0, 10);
+            const computedDueDate = paidToday ? todayISO : (isBill ? dueDate : "");
             await updateTransaction(transaction.id, {
                 name,
                 description,
                 amount,
-                due_date: paidToday ? todayISO : dueDate,
+                due_date: computedDueDate,
                 payment_date: paidToday ? todayISO : undefined,
                 paid_amount: paidToday ? amount : undefined,
                 subcategory_id: subcategoryId || undefined,
@@ -162,7 +165,7 @@ export default function TransactionFormModal({
                                         onValueChange={setAmount}
                                     />
                                 </Field.Root>
-                                {!paidToday && (
+                                {!paidToday && isBill && (
                                     <Field.Root>
                                         <Field.Label>Data Vencimento</Field.Label>
                                         <Input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} />
@@ -176,6 +179,18 @@ export default function TransactionFormModal({
                                 onCheckedChange={(e) => setPaidToday(e.checked)}
                                 label={type === 'INCOME' ? 'Já foi recebida hoje' : 'Já foi paga hoje'}
                             />
+
+                            {!paidToday && type === 'EXPENSE' && (
+                                <Field.Root mt={4}>
+                                    <Field.Label>Qual é o tipo desta transação?</Field.Label>
+                                    <RadioGroup value={isBill ? "bill" : "purchase"} onValueChange={(e) => setIsBill(e.value === "bill")}>
+                                        <Stack gap={2}>
+                                            <Radio value="bill" label="📅 Conta/Compromisso agendado - É uma conta fixa ou despesa planejada com data de vencimento" />
+                                            <Radio value="purchase" label="⚡ Compra/Gasto impulsivo - É uma compra espontânea ou despesa sem data fixa" />
+                                        </Stack>
+                                    </RadioGroup>
+                                </Field.Root>
+                            )}
 
                             <SimpleGrid columns={{ base: 1, md: 2 }} gap={4} mt={4}>
                                 <Field.Root>

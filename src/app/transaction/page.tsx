@@ -10,7 +10,7 @@ import TransactionFormModal from "@/components/transaction/TransactionFormModal"
 import TransactionPaymentModal from "@/components/transaction/TransactionPaymentModal";
 import TransactionFilterModal from "@/components/transaction/TransactionFilterModal";
 import TransactionActiveFiltersBar from "@/components/transaction/TransactionActiveFiltersBar";
-import { getTransactionSummary, getTransactions, removeTransaction } from "@/lib/api/transaction";
+import { getTransactionSummary, getTransactions, removeTransaction, getPlannedVsUnplanned } from "@/lib/api/transaction";
 import { getCategories } from "@/lib/api/category";
 import { getSubcategories } from "@/lib/api/subcategory";
 import { getBankAccounts } from "@/lib/api/bank-account";
@@ -49,6 +49,7 @@ export default function PageTransaction() {
     const [subcategories, setSubcategories] = useState<Subcategory[]>([]);
     const [accounts, setAccounts] = useState<BankAccount[]>([]);
     const [summary, setSummary] = useState<TransactionSummary | null>(null);
+    const [plannedVsUnplanned, setPlannedVsUnplanned] = useState<{ month: string; planned: { total: number; count: number }; unplanned: { total: number; count: number } } | null>(null);
 
     const [formModalOpen, setFormModalOpen] = useState<boolean>(false);
     const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
@@ -72,7 +73,14 @@ export default function PageTransaction() {
 
     async function loadSummary() {
         try {
-            setSummary(await getTransactionSummary(filters));
+            const [summaryData, plannedData] = await Promise.all([
+                getTransactionSummary(filters),
+                filters.from ? getPlannedVsUnplanned(filters.from.split('-').slice(0, 2).join('-')) : null,
+            ]);
+            setSummary(summaryData);
+            if (plannedData) {
+                setPlannedVsUnplanned(plannedData);
+            }
         } catch (error) {
             // summary is a secondary indicator; failing to load it shouldn't block the page
         }
@@ -89,6 +97,7 @@ export default function PageTransaction() {
                 ...(filters.type && { type: filters.type }),
                 ...(filters.account_id && { account_id: filters.account_id }),
                 ...(filters.subcategory_id && { subcategory_id: filters.subcategory_id }),
+                ...(filters.is_planned && { is_planned: filters.is_planned }),
             },
         }),
         [filters],
@@ -219,6 +228,16 @@ export default function PageTransaction() {
             ),
         },
         {
+            key: "is_planned",
+            header: "Intenção",
+            sortable: true,
+            render: (row) => (
+                <StatusBadge status={row.is_planned ? "info" : "warning"} variant="outline">
+                    {row.is_planned ? "📅 Planejado" : "⚡ Impulsivo"}
+                </StatusBadge>
+            ),
+        },
+        {
             key: "type",
             header: "Tipo",
             sortable: true,
@@ -279,7 +298,7 @@ export default function PageTransaction() {
                 onClear={() => setFilters(getCurrentMonthRange())}
             />
 
-            <TransactionSummaryCards summary={summary} />
+            <TransactionSummaryCards summary={summary} plannedVsUnplanned={plannedVsUnplanned} />
 
             <Card.Root>
                 <Card.Body>
@@ -294,6 +313,7 @@ export default function PageTransaction() {
                         errorMessage="Não foi possível carregar as transações"
                         onDataLoading={loadTransactions}
                         pageSizeOptions={[5, 10, 25, 50]}
+                        height="600px"
                     />
                 </Card.Body>
             </Card.Root>

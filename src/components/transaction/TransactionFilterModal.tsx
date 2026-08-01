@@ -35,6 +35,7 @@ export default function TransactionFilterModal({
     const [accountId, setAccountId] = useState<string>("");
     const [categoryId, setCategoryId] = useState<string>("");
     const [subcategoryId, setSubcategoryId] = useState<string>("");
+    const [isPlanned, setIsPlanned] = useState<string>("");
 
     useEffect(() => {
         if (!open) return;
@@ -43,6 +44,7 @@ export default function TransactionFilterModal({
         setType(filters.type ?? "");
         setAccountId(filters.account_id ?? "");
         setSubcategoryId(filters.subcategory_id ?? "");
+        setIsPlanned(filters.is_planned ?? "");
         const sub = subcategories.find((s) => s.id === filters.subcategory_id);
         setCategoryId(filters.category_id ?? sub?.categoryId ?? "");
     }, [open, filters, subcategories]);
@@ -54,6 +56,7 @@ export default function TransactionFilterModal({
         setAccountId("");
         setCategoryId("");
         setSubcategoryId("");
+        setIsPlanned("");
     }
 
     function handleApply() {
@@ -64,6 +67,7 @@ export default function TransactionFilterModal({
             account_id: accountId || undefined,
             category_id: categoryId || undefined,
             subcategory_id: subcategoryId || undefined,
+            is_planned: isPlanned || undefined,
         });
         onClose();
     }
@@ -96,6 +100,17 @@ export default function TransactionFilterModal({
                                         <Radio value="ALL" label="Todos" />
                                         <Radio value="EXPENSE" label="Despesa" />
                                         <Radio value="INCOME" label="Receita" />
+                                    </Stack>
+                                </RadioGroup>
+                            </Field.Root>
+
+                            <Field.Root mt={4}>
+                                <Field.Label>Intenção</Field.Label>
+                                <RadioGroup value={isPlanned || "ALL"} onValueChange={(e) => setIsPlanned(e.value === "ALL" ? "" : e.value)}>
+                                    <Stack direction="row" gap={4}>
+                                        <Radio value="ALL" label="Todos" />
+                                        <Radio value="true" label="📅 Planejado" />
+                                        <Radio value="false" label="⚡ Impulsivo" />
                                     </Stack>
                                 </RadioGroup>
                             </Field.Root>
