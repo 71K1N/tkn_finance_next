@@ -106,7 +106,7 @@ export default function TransactionFilterModal({
 
                             <Field.Root mt={4}>
                                 <Field.Label>Intenção</Field.Label>
-                                <RadioGroup value={isPlanned || "ALL"} onValueChange={(e) => setIsPlanned(e.value === "ALL" ? "" : e.value)}>
+                                <RadioGroup value={isPlanned || "ALL"} onValueChange={(e) => setIsPlanned(e.value === "ALL" || !e.value ? "" : e.value)}>
                                     <Stack direction="row" gap={4}>
                                         <Radio value="ALL" label="Todos" />
                                         <Radio value="true" label="📅 Planejado" />
