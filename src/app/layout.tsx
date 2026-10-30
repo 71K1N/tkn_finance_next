@@ -1,9 +1,7 @@
 import type { Metadata } from "next";
 import { Roboto, Montserrat } from "next/font/google";
-import Sidebar from "@/components/Sidebar";
-import FloatingActionButton from "@/components/FloatingActionButton"
+import AuthShell from "@/components/AuthShell";
 import Providers from "./providers";
-import { Box } from "@chakra-ui/react";
 
 const roboto = Roboto({
   subsets: ["latin"],
@@ -33,12 +31,7 @@ export default function RootLayout({
     <html lang="pt-BR" className={`${roboto.variable} ${montserrat.variable}`}>
       <body>
         <Providers>
-          <Sidebar />
-          {/* ml uses literal px, not the "sidebar"/"sidebar-mini" tokens: those are sizes-scale tokens and margin props read from the spacing scale, so the token names don't resolve here */}
-          <Box bg="bg.canvas" ml={{ base: 0, md: "72px", lg: "260px" }}>
-            {children}
-          </Box>
-          <FloatingActionButton />
+          <AuthShell>{children}</AuthShell>
         </Providers>
       </body>
     </html>

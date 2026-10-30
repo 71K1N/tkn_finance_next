@@ -26,7 +26,19 @@ export type TransactionInput = {
     subcategory_id?: string;
     account_id: string;
     target_account_id?: string;
+    /** "transfer" moves money between two accounts and requires `target_account_id`. */
+    type: TransactionType | "transfer";
+};
+
+/** Draft built by the API from a free-text sentence; nothing is saved until the user confirms the form. */
+export type TransactionDraft = {
+    name: string | null;
+    amount: number | null;
     type: TransactionType;
+    /** `YYYY-MM-DD`, never in the future. */
+    payment_date: string;
+    subcategory_id: string | null;
+    account_id: string | null;
 };
 
 export type PaymentInput = {
@@ -69,4 +81,12 @@ export type MonthlyTrendEntry = {
 export type BalanceEvolutionEntry = {
     month: string;
     balance: number;
+};
+
+/** Paid income/expenses and transaction count for one day (`YYYY-MM-DD`); days without movement are not returned. */
+export type DailySummaryEntry = {
+    date: string;
+    expenses: number;
+    income: number;
+    count: number;
 };

@@ -2,6 +2,7 @@
 import { useRef, useState } from "react";
 import { Edit, Trash2, Save, X } from 'react-feather';
 import swal from 'sweetalert';
+import { notifyError, notifySuccess } from "@/lib/ui/notify";
 import { Button, DataTable, PageHeader, type DataTableColumn, type DataTableAction, type DataTableHandle } from "tikin-uai";
 import { Card, Container, Field, Input, SimpleGrid, Stack } from "@chakra-ui/react";
 import { createCategory, getCategories, removeCategory, updateCategory } from "@/lib/api/category";
@@ -46,11 +47,11 @@ export default function PageCategory() {
         setLoading(true);
         try {
             await createCategory({ name, description });
-            swal("Sucesso!", "Categoria criada com sucesso!", "success");
+            notifySuccess("Categoria criada com sucesso!");
             clearForm();
             tableRef.current?.refetch();
         } catch (error) {
-            swal("Erro!", "Não foi possível criar a categoria", "error");
+            notifyError("Não foi possível criar a categoria");
         } finally {
             setLoading(false);
         }
@@ -60,11 +61,11 @@ export default function PageCategory() {
         setLoading(true);
         try {
             await updateCategory(id, { name, description });
-            swal("Sucesso!", "Categoria atualizada com sucesso!", "success");
+            notifySuccess("Categoria atualizada com sucesso!");
             clearForm();
             tableRef.current?.refetch();
         } catch (error) {
-            swal("Erro!", "Não foi possível atualizar a categoria", "error");
+            notifyError("Não foi possível atualizar a categoria");
         } finally {
             setLoading(false);
         }
@@ -82,10 +83,10 @@ export default function PageCategory() {
                 setLoading(true);
                 try {
                     await removeCategory(item.id);
-                    swal("Sucesso!", "Categoria excluída com sucesso!", "success");
+                    notifySuccess("Categoria excluída com sucesso!");
                     tableRef.current?.refetch();
                 } catch (error) {
-                    swal("Erro!", "Não foi possível excluir a categoria", "error");
+                    notifyError("Não foi possível excluir a categoria");
                 } finally {
                     setLoading(false);
                 }

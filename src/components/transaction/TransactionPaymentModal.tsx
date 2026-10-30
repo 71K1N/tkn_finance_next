@@ -1,6 +1,6 @@
 "use client"
 import { useEffect, useState } from "react";
-import swal from 'sweetalert';
+import { notifyError, notifySuccess } from "@/lib/ui/notify";
 import { Button } from "tikin-uai";
 import { Dialog, Field, Input, Portal, Stack, Text } from "@chakra-ui/react";
 import { payTransaction } from "@/lib/api/transaction";
@@ -33,7 +33,7 @@ export default function TransactionPaymentModal({ transaction, onClose, onSaved 
         setLoading(true);
         try {
             await payTransaction(transaction.id, { payment_date: paymentDate, paid_amount: paidAmount });
-            swal("Sucesso!", "Pagamento registrado com sucesso!", "success");
+            notifySuccess("Pagamento registrado com sucesso!");
             onSaved();
             onClose();
         } catch (error) {
@@ -41,7 +41,7 @@ export default function TransactionPaymentModal({ transaction, onClose, onSaved 
                 404: "Transação não encontrada. Ela pode ter sido excluída.",
                 409: "Esta transação já foi paga.",
             });
-            swal("Erro!", message, "error");
+            notifyError(message);
             onSaved();
             onClose();
         } finally {

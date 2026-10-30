@@ -6,6 +6,7 @@ import DashboardSummaryCard from "@/components/dashboard/DashboardSummaryCard";
 import DashboardTrendChart, { TrendMonth } from "@/components/dashboard/DashboardTrendChart";
 import UpcomingTransactionsCard, { UpcomingTransaction } from "@/components/dashboard/UpcomingTransactionsCard";
 import AddTransactionAction from "@/components/dashboard/AddTransactionAction";
+import { http } from "@/lib/api/http";
 import { useFormatCurrency } from "@/lib/hooks/useFormatCurrency";
 import { formatDateBR, todayLocalISO } from "@/lib/utils/date";
 
@@ -27,12 +28,6 @@ interface DashboardMetrics {
     trend: TrendMonth[];
     rangeLabel: string;
 }
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8081";
-const AUTH_HEADERS = {
-    'Content-Type': 'application/json',
-    'Authorization': `Bearer ${process.env.NEXT_PUBLIC_AUTH_TOKEN ?? "1"}`,
-};
 
 function getLastThreeMonths(): { year: number; month: number; label: string }[] {
     const now = new Date();
@@ -98,9 +93,7 @@ export default function FinancialDashboard() {
         setLoading(true);
         setError(null);
         try {
-            const response = await fetch(`${API_URL}/transaction`, { headers: AUTH_HEADERS });
-            if (!response.ok) throw new Error(`Erro ao carregar transações: ${response.status}`);
-            const data = await response.json();
+            const data = await http.get<unknown>('/transaction');
             const transactions: Transaction[] = Array.isArray(data) ? data : [];
             setMetrics(computeMetrics(transactions));
         } catch (err) {

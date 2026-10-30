@@ -2,6 +2,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Edit, Trash2, Save, X } from 'react-feather';
 import swal from 'sweetalert';
+import { notifyError, notifySuccess } from "@/lib/ui/notify";
 import { Button, DataTable, PageHeader, type DataTableColumn, type DataTableAction, type DataTableHandle } from "tikin-uai";
 import { Card, Container, Field, Input, NativeSelect, SimpleGrid, Stack } from "@chakra-ui/react";
 import { createSubcategory, getSubcategories, removeSubcategory, updateSubcategory } from "@/lib/api/subcategory";
@@ -24,7 +25,7 @@ export default function PageSubcategory() {
             const response = await getCategories({ page: 1, pageSize: 100 });
             setCategories(response.data);
         } catch (error) {
-            swal("Erro!", "Não foi possível carregar as categorias", "error");
+            notifyError("Não foi possível carregar as categorias");
         }
     }
 
@@ -70,11 +71,11 @@ export default function PageSubcategory() {
         setLoading(true);
         try {
             await createSubcategory({ name, description, categoryId });
-            swal("Sucesso!", "Subcategoria criada com sucesso!", "success");
+            notifySuccess("Subcategoria criada com sucesso!");
             clearForm();
             tableRef.current?.refetch();
         } catch (error) {
-            swal("Erro!", "Não foi possível criar a subcategoria", "error");
+            notifyError("Não foi possível criar a subcategoria");
         } finally {
             setLoading(false);
         }
@@ -84,11 +85,11 @@ export default function PageSubcategory() {
         setLoading(true);
         try {
             await updateSubcategory(id, { name, description, categoryId });
-            swal("Sucesso!", "Subcategoria atualizada com sucesso!", "success");
+            notifySuccess("Subcategoria atualizada com sucesso!");
             clearForm();
             tableRef.current?.refetch();
         } catch (error) {
-            swal("Erro!", "Não foi possível atualizar a subcategoria", "error");
+            notifyError("Não foi possível atualizar a subcategoria");
         } finally {
             setLoading(false);
         }
@@ -106,10 +107,10 @@ export default function PageSubcategory() {
                 setLoading(true);
                 try {
                     await removeSubcategory(item.id);
-                    swal("Sucesso!", "Subcategoria excluída com sucesso!", "success");
+                    notifySuccess("Subcategoria excluída com sucesso!");
                     tableRef.current?.refetch();
                 } catch (error) {
-                    swal("Erro!", "Não foi possível excluir a subcategoria", "error");
+                    notifyError("Não foi possível excluir a subcategoria");
                 } finally {
                     setLoading(false);
                 }

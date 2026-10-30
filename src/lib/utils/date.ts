@@ -41,6 +41,40 @@ export function currentMonthRange(): { from: string; to: string } {
     return { from: toDateInputValue(start), to: toDateInputValue(end) };
 }
 
+/** Whether `value` is an existing calendar day written as `YYYY-MM-DD`. */
+function isCalendarDay(value: string | null | undefined): value is string {
+    if (!value || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
+    const [year, month, day] = value.split("-").map(Number);
+    const date = new Date(year, month - 1, day);
+    return date.getFullYear() === year && date.getMonth() === month - 1 && date.getDate() === day;
+}
+
+/**
+ * Period carried by `from`/`to` query params, or `null` when either is missing, isn't a
+ * real `YYYY-MM-DD` day, or the range is reversed (ISO days compare correctly as strings).
+ */
+export function periodFromSearchParams(params: { get(name: string): string | null }): { from: string; to: string } | null {
+    const from = params.get("from");
+    const to = params.get("to");
+    if (!isCalendarDay(from) || !isCalendarDay(to) || from > to) return null;
+    return { from, to };
+}
+
+/**
+ * Same day-of-month as `dueDate` (`YYYY-MM-DD`, any time part ignored), in the current
+ * month of the browser's timezone. Clamped to the month's last day, so the 31st becomes
+ * the 28th/29th/30th in shorter months. Returns "" when `dueDate` isn't a valid date.
+ */
+export function projectDueDateToCurrentMonth(dueDate: string | null | undefined): string {
+    if (!dueDate) return "";
+    const day = Number(dueDate.split("T")[0].split("-")[2]);
+    if (!day) return "";
+
+    const now = new Date();
+    const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+    return toDateInputValue(new Date(now.getFullYear(), now.getMonth(), Math.min(day, lastDay)));
+}
+
 /**
  * Formats an API date for display in pt-BR.
  *

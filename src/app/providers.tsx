@@ -1,13 +1,17 @@
 "use client";
 
 import { ChakraProvider } from "@chakra-ui/react";
-import { system } from "tikin-uai";
+import { Toaster, system } from "tikin-uai";
+import { AuthProvider } from "@/contexts/AuthContext";
 import { HideValuesProvider } from "@/contexts/HideValuesContext";
 
 export default function Providers({ children }: { children: React.ReactNode }) {
   return (
     <ChakraProvider value={system}>
-      <HideValuesProvider>{children}</HideValuesProvider>
+      <AuthProvider>
+        <HideValuesProvider>{children}</HideValuesProvider>
+        <Toaster />
+      </AuthProvider>
     </ChakraProvider>
   );
 }

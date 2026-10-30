@@ -2,6 +2,7 @@
 import { useRef, useState } from "react";
 import { Edit, Trash2, Save, X, ArrowDownCircle, ArrowUpCircle } from 'react-feather';
 import swal from 'sweetalert';
+import { notifyError, notifySuccess } from "@/lib/ui/notify";
 import { Button, DataTable, PageHeader, type DataTableColumn, type DataTableAction, type DataTableHandle } from "tikin-uai";
 import { Card, Container, Dialog, Field, Input, Portal, Progress, SimpleGrid, Stack, Text } from "@chakra-ui/react";
 import {
@@ -59,11 +60,11 @@ export default function PageSavingsGoal() {
         setLoading(true);
         try {
             await createSavingsGoal({ name, targetAmount, monthlyAllocation });
-            swal("Sucesso!", "Meta criada com sucesso!", "success");
+            notifySuccess("Meta criada com sucesso!");
             clearForm();
             tableRef.current?.refetch();
         } catch (error) {
-            swal("Erro!", "Não foi possível criar a meta", "error");
+            notifyError("Não foi possível criar a meta");
         } finally {
             setLoading(false);
         }
@@ -73,11 +74,11 @@ export default function PageSavingsGoal() {
         setLoading(true);
         try {
             await updateSavingsGoal(id, { name, targetAmount, monthlyAllocation });
-            swal("Sucesso!", "Meta atualizada com sucesso!", "success");
+            notifySuccess("Meta atualizada com sucesso!");
             clearForm();
             tableRef.current?.refetch();
         } catch (error) {
-            swal("Erro!", "Não foi possível atualizar a meta", "error");
+            notifyError("Não foi possível atualizar a meta");
         } finally {
             setLoading(false);
         }
@@ -95,10 +96,10 @@ export default function PageSavingsGoal() {
                 setLoading(true);
                 try {
                     await removeSavingsGoal(item.id);
-                    swal("Sucesso!", "Meta excluída com sucesso!", "success");
+                    notifySuccess("Meta excluída com sucesso!");
                     tableRef.current?.refetch();
                 } catch (error) {
-                    swal("Erro!", "Não foi possível excluir a meta", "error");
+                    notifyError("Não foi possível excluir a meta");
                 } finally {
                     setLoading(false);
                 }
@@ -136,11 +137,11 @@ export default function PageSavingsGoal() {
             } else {
                 await withdrawSavingsGoal(movementTarget.id, movementAmount);
             }
-            swal("Sucesso!", movementType === 'deposit' ? "Depósito registrado!" : "Saque registrado!", "success");
+            notifySuccess(movementType === 'deposit' ? "Depósito registrado!" : "Saque registrado!");
             setMovementTarget(null);
             tableRef.current?.refetch();
         } catch (error) {
-            swal("Erro!", "Não foi possível registrar o movimento", "error");
+            notifyError("Não foi possível registrar o movimento");
         } finally {
             setLoading(false);
         }

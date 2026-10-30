@@ -8,11 +8,12 @@ import {
 import { Box, Card, Container, Flex, Heading, Progress, SimpleGrid, Stack, Text } from "@chakra-ui/react";
 import StatusBadge from "@/components/StatusBadge";
 import { getTotalBalance } from "@/lib/api/bank-account";
-import { getTransactionSummary, getCategoryBreakdown, getMonthlyTrend, getBalanceEvolution } from "@/lib/api/transaction";
+import { getTransactionSummary, getCategoryBreakdown, getMonthlyTrend, getBalanceEvolution, getDailySummary } from "@/lib/api/transaction";
 import { getSavingsGoals } from "@/lib/api/savings-goal";
-import type { CategoryBreakdown, MonthlyTrendEntry, BalanceEvolutionEntry, TransactionSummary } from "@/lib/types/transaction";
+import type { CategoryBreakdown, MonthlyTrendEntry, BalanceEvolutionEntry, TransactionSummary, DailySummaryEntry } from "@/lib/types/transaction";
 import type { SavingsGoal } from "@/lib/types/savings-goal";
 import AiInsightsCard from "@/components/dashboard/AiInsightsCard";
+import CalendarHeatmap from "@/components/dashboard/CalendarHeatmap";
 import { useFormatCurrency } from "@/lib/hooks/useFormatCurrency";
 import { currentMonthLocal } from "@/lib/utils/date";
 
@@ -34,26 +35,36 @@ export default function Home() {
     const [categoryBreakdown, setCategoryBreakdown] = useState<CategoryBreakdown>({ month: "", categories: [] });
     const [monthlyTrend, setMonthlyTrend] = useState<MonthlyTrendEntry[]>([]);
     const [balanceEvolution, setBalanceEvolution] = useState<BalanceEvolutionEntry[]>([]);
+    const [dailySummary, setDailySummary] = useState<DailySummaryEntry[]>([]);
+    const [dailySummaryStatus, setDailySummaryStatus] = useState<"loading" | "ready" | "error">("loading");
+    const heatmapYear = new Date().getFullYear();
 
     useEffect(() => {
         const month = currentMonthLocal();
 
         Promise.allSettled([
             getTotalBalance(),
-            getTransactionSummary({ month }),
+            getTransactionSummary({ month, status: "paid" }),
             getSavingsGoals({ page: 1, pageSize: 100 }),
             getCategoryBreakdown(month),
             getMonthlyTrend(6),
             getBalanceEvolution(6),
-        ]).then(([totalBalanceResult, summaryResult, goalsResult, categoryResult, trendResult, evolutionResult]) => {
+            getDailySummary(`${heatmapYear}-01-01`, `${heatmapYear}-12-31`),
+        ]).then(([totalBalanceResult, summaryResult, goalsResult, categoryResult, trendResult, evolutionResult, dailyResult]) => {
             if (totalBalanceResult.status === "fulfilled") setTotalBalance(totalBalanceResult.value.totalBalance);
             if (summaryResult.status === "fulfilled") setSummary(summaryResult.value);
             if (goalsResult.status === "fulfilled") setSavingsGoals(goalsResult.value.data);
             if (categoryResult.status === "fulfilled") setCategoryBreakdown(categoryResult.value);
             if (trendResult.status === "fulfilled") setMonthlyTrend(trendResult.value);
             if (evolutionResult.status === "fulfilled") setBalanceEvolution(evolutionResult.value);
+            if (dailyResult.status === "fulfilled") {
+                setDailySummary(dailyResult.value);
+                setDailySummaryStatus("ready");
+            } else {
+                setDailySummaryStatus("error");
+            }
         });
-    }, []);
+    }, [heatmapYear]);
 
     const monthlySavings = summary.totalIncome - summary.totalExpenses;
     const savingsRate = summary.totalIncome > 0 ? (monthlySavings / summary.totalIncome) * 100 : 0;
@@ -278,6 +289,13 @@ export default function Home() {
                     </Card.Body>
                 </Card.Root>
             </SimpleGrid>
+
+            <CalendarHeatmap
+                year={heatmapYear}
+                entries={dailySummary}
+                loading={dailySummaryStatus === "loading"}
+                error={dailySummaryStatus === "error"}
+            />
 
             {/* Histograma de Gastos por Categoria */}
             <Card.Root>

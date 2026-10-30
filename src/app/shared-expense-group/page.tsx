@@ -3,6 +3,7 @@ import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ExternalLink, Save, X, Archive } from 'react-feather';
 import swal from 'sweetalert';
+import { notifyError, notifySuccess } from "@/lib/ui/notify";
 import { Button, DataTable, type DataTableColumn, type DataTableAction, type DataTableHandle } from "tikin-uai";
 import { Box, Card, Container, Field, Heading, Input, SimpleGrid, Stack, Text } from "@chakra-ui/react";
 import StatusBadge from "@/components/StatusBadge";
@@ -35,11 +36,11 @@ export default function PageSharedExpenseGroup() {
         setLoading(true);
         try {
             await createExpenseGroup({ name, description: description || undefined });
-            swal("Sucesso!", "Grupo criado com sucesso!", "success");
+            notifySuccess("Grupo criado com sucesso!");
             clearForm();
             tableRef.current?.refetch();
         } catch (error) {
-            swal("Erro!", "Não foi possível criar o grupo", "error");
+            notifyError("Não foi possível criar o grupo");
         } finally {
             setLoading(false);
         }
@@ -57,10 +58,10 @@ export default function PageSharedExpenseGroup() {
                 setLoading(true);
                 try {
                     await archiveExpenseGroup(item.id);
-                    swal("Sucesso!", "Grupo arquivado com sucesso!", "success");
+                    notifySuccess("Grupo arquivado com sucesso!");
                     tableRef.current?.refetch();
                 } catch (error) {
-                    swal("Erro!", "Não foi possível arquivar o grupo", "error");
+                    notifyError("Não foi possível arquivar o grupo");
                 } finally {
                     setLoading(false);
                 }

@@ -2,6 +2,7 @@
 import { useRef, useState } from "react";
 import { CreditCard, Edit, Trash2, Save, X } from 'react-feather';
 import swal from 'sweetalert';
+import { notifyError, notifySuccess } from "@/lib/ui/notify";
 import { Button, DataTable, PageHeader, type DataTableColumn, type DataTableAction, type DataTableHandle } from "tikin-uai";
 import { Card, Container, Field, HStack, Input, SimpleGrid, Stack, Text } from "@chakra-ui/react";
 import { createBankAccount, getBankAccounts, removeBankAccount, updateBankAccount } from "@/lib/api/bank-account";
@@ -49,11 +50,11 @@ export default function PageAccount() {
         setLoading(true);
         try {
             await createBankAccount({ description, balance });
-            swal("Sucesso!", "Conta criada com sucesso!", "success");
+            notifySuccess("Conta criada com sucesso!");
             clearForm();
             tableRef.current?.refetch();
         } catch (error) {
-            swal("Erro!", "Não foi possível criar a conta", "error");
+            notifyError("Não foi possível criar a conta");
         } finally {
             setLoading(false);
         }
@@ -63,11 +64,11 @@ export default function PageAccount() {
         setLoading(true);
         try {
             await updateBankAccount(id, { description, balance });
-            swal("Sucesso!", "Conta atualizada com sucesso!", "success");
+            notifySuccess("Conta atualizada com sucesso!");
             clearForm();
             tableRef.current?.refetch();
         } catch (error) {
-            swal("Erro!", "Não foi possível atualizar a conta", "error");
+            notifyError("Não foi possível atualizar a conta");
         } finally {
             setLoading(false);
         }
@@ -85,10 +86,10 @@ export default function PageAccount() {
                 setLoading(true);
                 try {
                     await removeBankAccount(item.id);
-                    swal("Sucesso!", "Conta excluída com sucesso!", "success");
+                    notifySuccess("Conta excluída com sucesso!");
                     tableRef.current?.refetch();
                 } catch (error) {
-                    swal("Erro!", "Não foi possível excluir a conta", "error");
+                    notifyError("Não foi possível excluir a conta");
                 } finally {
                     setLoading(false);
                 }

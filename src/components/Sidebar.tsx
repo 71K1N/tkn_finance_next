@@ -1,9 +1,10 @@
 "use client"
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Activity, CreditCard, DollarSign, Eye, EyeOff, Grid, Home, List, Menu, PieChart, ShoppingBag, Target, Users, X } from 'react-feather'
+import { Activity, CreditCard, DollarSign, Eye, EyeOff, Grid, Home, List, LogOut, Menu, PieChart, ShoppingBag, Target, Users, X } from 'react-feather'
 import { Box, Drawer, Flex, IconButton, Text, useDisclosure } from '@chakra-ui/react'
 import { useHideValues } from '@/contexts/HideValuesContext'
+import { useAuth } from '@/contexts/AuthContext'
 
 type NavItem = { href: string; label: string; icon: typeof Home }
 type NavSection = { title: string; items: NavItem[] }
@@ -101,7 +102,6 @@ function NavLinks({ pathname, onNavigate, compact = false }: { pathname: string;
                     </Box>
                 </Box>
             ))}
-            {/* TODO: user profile footer once real auth/session data exists */}
         </Box>
     )
 }
@@ -129,6 +129,38 @@ function HideValuesToggle({ compact = false }: { compact?: boolean }) {
                 <Text fontSize="sm" display={labelDisplay} _groupHover={labelGroupHover}>
                     {hidden ? 'Mostrar valores' : 'Ocultar valores'}
                 </Text>
+            </Flex>
+        </Box>
+    )
+}
+
+function UserFooter({ compact = false }: { compact?: boolean }) {
+    const { user, logout } = useAuth()
+    const labelDisplay = compact ? { base: 'block', md: 'none', lg: 'block' } : 'block'
+    const labelGroupHover = compact ? { display: 'block' } : undefined
+
+    return (
+        <Box px={3} mb={4}>
+            {user && (
+                <Box px={2} mb={1} display={labelDisplay} _groupHover={labelGroupHover}>
+                    <Text fontSize="sm" fontWeight="semibold" color="text.heading" truncate>{user.name || user.email}</Text>
+                    {user.name && <Text fontSize="xs" color="text.muted" truncate>{user.email}</Text>}
+                </Box>
+            )}
+            <Flex
+                as="button"
+                onClick={logout}
+                align="center"
+                gap={2}
+                px={2}
+                py={2}
+                w="full"
+                borderRadius="md"
+                color="text.muted"
+                _hover={{ color: 'text.heading' }}
+            >
+                <LogOut size={18} />
+                <Text fontSize="sm" display={labelDisplay} _groupHover={labelGroupHover}>Sair</Text>
             </Flex>
         </Box>
     )
@@ -163,6 +195,7 @@ export default function Sidebar() {
                 <BrandHeader compact />
                 <NavLinks pathname={pathname} compact />
                 <HideValuesToggle compact />
+                <UserFooter compact />
             </Box>
 
             <Flex
@@ -208,6 +241,7 @@ export default function Sidebar() {
                         </Flex>
                         <Drawer.Body px={0}>
                             <NavLinks pathname={pathname} onNavigate={onClose} />
+                            <UserFooter />
                         </Drawer.Body>
                     </Drawer.Content>
                 </Drawer.Positioner>

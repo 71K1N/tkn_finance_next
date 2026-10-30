@@ -1,12 +1,15 @@
 "use client"
-import { useCallback, useEffect, useRef, useState } from "react";
-import { Trash2, Edit, DollarSign, Plus, List, Calendar, Tag, Filter } from 'react-feather';
+import { Suspense, useCallback, useEffect, useRef, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Trash2, Edit, DollarSign, Plus, List, Calendar, Tag, Filter, Upload } from 'react-feather';
 import swal from 'sweetalert';
+import { notifyError, notifySuccess } from "@/lib/ui/notify";
 import { Button, DataTable, PageHeader, type DataTableColumn, type DataTableAction, type DataTableHandle, type DataTableRequestParams } from "tikin-uai";
 import { Card, Container, HStack, Text } from "@chakra-ui/react";
 import StatusBadge from "@/components/StatusBadge";
 import TransactionSummaryCards from "@/components/transaction/TransactionSummaryCards";
 import TransactionFormModal from "@/components/transaction/TransactionFormModal";
+import { TRANSACTIONS_CHANGED_EVENT } from "@/components/transaction/QuickEntryDialog";
 import TransactionPaymentModal from "@/components/transaction/TransactionPaymentModal";
 import TransactionFilterModal from "@/components/transaction/TransactionFilterModal";
 import TransactionActiveFiltersBar from "@/components/transaction/TransactionActiveFiltersBar";
@@ -19,10 +22,23 @@ import type { Category } from "@/lib/types/category";
 import type { Subcategory } from "@/lib/types/subcategory";
 import type { BankAccount } from "@/lib/types/bank-account";
 import { useFormatCurrency } from "@/lib/hooks/useFormatCurrency";
-import { currentMonthRange, formatDateBR } from "@/lib/utils/date";
+import { currentMonthRange, formatDateBR, periodFromSearchParams } from "@/lib/utils/date";
 import { getErrorMessage } from "@/lib/utils/api-error";
 
 export default function PageTransaction() {
+    // useSearchParams opts the page out of static prerendering unless it sits under a boundary.
+    return (
+        <Suspense fallback={null}>
+            <TransactionPageContent />
+        </Suspense>
+    );
+}
+
+function TransactionPageContent() {
+    const router = useRouter();
+    const searchParams = useSearchParams();
+    // Period handed over by a link (e.g. the home heatmap's day cells); otherwise the current month.
+    const urlPeriod = periodFromSearchParams(searchParams);
     const formatCurrency = useFormatCurrency();
     const [loading, setLoading] = useState<boolean>(false);
 
@@ -36,7 +52,7 @@ export default function PageTransaction() {
     const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
     const [paymentTarget, setPaymentTarget] = useState<Transaction | null>(null);
 
-    const [filters, setFilters] = useState<TransactionFilters>(() => currentMonthRange());
+    const [filters, setFilters] = useState<TransactionFilters>(() => urlPeriod ?? currentMonthRange());
     const [filterModalOpen, setFilterModalOpen] = useState<boolean>(false);
 
     const tableRef = useRef<DataTableHandle>(null);
@@ -92,16 +108,27 @@ export default function PageTransaction() {
     // clock (UTC) rather than the user's. They only disagree late in the evening on the
     // last day of a month — when they do, adopt the browser's range and refetch.
     useEffect(() => {
+        if (urlPeriod) return;
         const clientRange = currentMonthRange();
         setFilters((current) =>
             current.from === clientRange.from && current.to === clientRange.to
                 ? current
                 : { ...current, ...clientRange },
         );
+        // Mount-only: later URL changes must not override filters the user has edited.
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
     useEffect(() => {
         loadSummary();
+    }, [filters]);
+
+    // A transaction saved from the floating button's quick entry shows up without a reload.
+    useEffect(() => {
+        window.addEventListener(TRANSACTIONS_CHANGED_EVENT, handleSaved);
+        return () => window.removeEventListener(TRANSACTIONS_CHANGED_EVENT, handleSaved);
+        // handleSaved closes over `filters` through loadSummary, so re-register when they change.
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [filters]);
 
     function categoryName(subcategoryId: string | null) {
@@ -140,14 +167,14 @@ export default function PageTransaction() {
                 setLoading(true);
                 try {
                     await removeTransaction(item.id);
-                    swal("Sucesso!", "Transação excluída com sucesso!", "success");
+                    notifySuccess("Transação excluída com sucesso!");
                     tableRef.current?.refetch();
                     loadSummary();
                 } catch (error) {
                     const message = getErrorMessage(error, "Não foi possível excluir a transação", {
                         404: "Transação não encontrada. Ela pode já ter sido excluída.",
                     });
-                    swal("Erro!", message, "error");
+                    notifyError(message);
                     tableRef.current?.refetch();
                 } finally {
                     setLoading(false);
@@ -172,25 +199,26 @@ export default function PageTransaction() {
             sortable: true,
             render: (row) => (
                 <HStack gap={2}>
-                    <List size={16} />
                     <Text>{row.name}</Text>
                 </HStack>
             ),
+            width: "200px",
         },
         {
             key: "subcategory_id",
             header: "Categoria",
             render: (row) => (
                 <HStack gap={2}>
-                    <Tag size={16} />
-                    <Text>{categoryName(row.subcategory_id)} / {subcategoryName(row.subcategory_id)}</Text>
+                    <Text>{categoryName(row.subcategory_id)} - {subcategoryName(row.subcategory_id)}</Text>
                 </HStack>
             ),
+            width: "200px",
         },
         {
             key: "account_id",
             header: "Conta",
             render: (row) => accountName(row.account_id),
+            width: "70px",
         },
         
         {
@@ -199,10 +227,10 @@ export default function PageTransaction() {
             sortable: true,
             render: (row) => (
                 <HStack gap={2}>
-                    <Calendar size={16} />
                     <Text>{formatDateBR(row.due_date)}</Text>
                 </HStack>
             ),
+            width: "150px",
         },
         {
             key: "payment_date",
@@ -210,39 +238,42 @@ export default function PageTransaction() {
             sortable: true,
             render: (row) => (
                 <HStack gap={2}>
-                    <Calendar size={16} />
                     <Text>{formatDateBR(row.payment_date)}</Text>
                 </HStack>
             ),
+            width: "170px",
         },
         {
             key: "status",
             header: "Status",
             render: (row) => (
-                <StatusBadge status={row.payment_date ? "success" : "warning"} variant="outline">
+                <StatusBadge status={row.payment_date ? "success" : "warning"} variant="surface">
                     {row.payment_date ? "Pago" : "Pendente"}
                 </StatusBadge>
             ),
+            width: "110px",
         },
         {
             key: "is_planned",
             header: "Intenção",
             sortable: true,
             render: (row) => (
-                <StatusBadge status={row.is_planned ? "info" : "warning"} variant="outline">
-                    {row.is_planned ? "📅 Planejado" : "⚡ Impulsivo"}
+                <StatusBadge status={row.is_planned ? "neutral" : "warning"} variant="surface">
+                    {row.is_planned ? "Planejado" : "Impulsivo"}
                 </StatusBadge>
             ),
+            width: "150px",
         },
         {
             key: "type",
             header: "Tipo",
             sortable: true,
             render: (row) => (
-                <StatusBadge status={row.type === 'EXPENSE' ? "danger" : "success"} variant="outline">
+                <StatusBadge status={row.type === 'EXPENSE' ? "danger" : "success"} variant="surface">
                     {row.type === 'EXPENSE' ? "Despesa" : "Receita"}
                 </StatusBadge>
             ),
+            width: "100px",
         },
         {
             key: "amount",
@@ -253,6 +284,7 @@ export default function PageTransaction() {
                     {formatCurrency(row.amount)}
                 </Text>
             ),
+            width: "100px",
         },
     ];
 
@@ -274,10 +306,14 @@ export default function PageTransaction() {
                 subtitle="Gerencie suas transações financeiras"
                 mb={6}
                 actions={
-                    <HStack gap={2}>
+                    <HStack gap={2} flexWrap="wrap">
                         <Button variant="outline" onClick={() => setFilterModalOpen(true)} disabled={loading}>
                             <Filter size={16} />
                             Filtros
+                        </Button>
+                        <Button variant="outline" onClick={() => router.push("/transaction/import")} disabled={loading}>
+                            <Upload size={16} />
+                            Importar extrato
                         </Button>
                         <Button colorPalette="primary" onClick={openCreate} disabled={loading}>
                             <Plus size={16} />
@@ -310,7 +346,7 @@ export default function PageTransaction() {
                         errorMessage="Não foi possível carregar as transações"
                         onDataLoading={loadTransactions}
                         pageSizeOptions={[5, 10, 25, 50]}
-                        height="600px"
+                        height="55vh"
                     />
                 </Card.Body>
             </Card.Root>

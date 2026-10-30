@@ -2,6 +2,7 @@
 import { useRef, useState } from "react";
 import { Edit, Trash2, Save, X } from 'react-feather';
 import swal from 'sweetalert';
+import { notifyError, notifySuccess } from "@/lib/ui/notify";
 import { Button, DataTable, PageHeader, type DataTableColumn, type DataTableAction, type DataTableHandle } from "tikin-uai";
 import { Card, Container, Field, Input, NativeSelect, SimpleGrid, Stack } from "@chakra-ui/react";
 import StatusBadge from "@/components/StatusBadge";
@@ -70,11 +71,11 @@ export default function PageWishlist() {
         setLoading(true);
         try {
             await createWishItem({ name, estimatedCost, targetDate, priority });
-            swal("Sucesso!", "Item criado com sucesso!", "success");
+            notifySuccess("Item criado com sucesso!");
             clearForm();
             tableRef.current?.refetch();
         } catch (error) {
-            swal("Erro!", "Não foi possível criar o item", "error");
+            notifyError("Não foi possível criar o item");
         } finally {
             setLoading(false);
         }
@@ -84,11 +85,11 @@ export default function PageWishlist() {
         setLoading(true);
         try {
             await updateWishItem(id, { name, estimatedCost, targetDate, priority });
-            swal("Sucesso!", "Item atualizado com sucesso!", "success");
+            notifySuccess("Item atualizado com sucesso!");
             clearForm();
             tableRef.current?.refetch();
         } catch (error) {
-            swal("Erro!", "Não foi possível atualizar o item", "error");
+            notifyError("Não foi possível atualizar o item");
         } finally {
             setLoading(false);
         }
@@ -106,10 +107,10 @@ export default function PageWishlist() {
                 setLoading(true);
                 try {
                     await removeWishItem(item.id);
-                    swal("Sucesso!", "Item excluído com sucesso!", "success");
+                    notifySuccess("Item excluído com sucesso!");
                     tableRef.current?.refetch();
                 } catch (error) {
-                    swal("Erro!", "Não foi possível excluir o item", "error");
+                    notifyError("Não foi possível excluir o item");
                 } finally {
                     setLoading(false);
                 }
@@ -122,7 +123,7 @@ export default function PageWishlist() {
             await updateWishItemStatus(item.id, status);
             tableRef.current?.refetch();
         } catch (error) {
-            swal("Erro!", "Não foi possível atualizar o status", "error");
+            notifyError("Não foi possível atualizar o status");
         }
     }
 

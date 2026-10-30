@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "deploy:rasp": "bash scripts/deploy-rasp.sh"
   },
   "dependencies": {
     "@chakra-ui/react": "^3.36.0",
@@ -19,7 +20,7 @@
     "react-number-format": "^5.4.5",
     "recharts": "^2.15.3",
     "sweetalert": "^2.1.2",
-    "tikin-uai": "0.0.1"
+    "tikin-uai": "^0.0.7"
   },
   "devDependencies": {
     "@types/node": "^20",
