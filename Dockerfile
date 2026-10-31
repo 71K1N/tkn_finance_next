@@ -14,9 +14,16 @@ COPY . .
 # NEXT_PUBLIC_* vars are inlined at build time. Default is same-origin "/api",
 # meant to be routed to the backend by the nginx reverse proxy.
 ARG NEXT_PUBLIC_API_URL=/api
-ARG NEXT_PUBLIC_AUTH_TOKEN=1
+ARG NEXT_PUBLIC_GOOGLE_CLIENT_ID=
+# Must match the backend's APP_TIMEZONE - used to render instant date values
+# (e.g. payment_date) on the same calendar day regardless of the viewer's own timezone.
+ARG NEXT_PUBLIC_APP_TIMEZONE=America/Sao_Paulo
+# .git is not in the build context; pass the commit (e.g. --build-arg GIT_SHA=$(git rev-parse --short HEAD)).
+ARG GIT_SHA=
+ENV GIT_SHA=$GIT_SHA
 ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
-ENV NEXT_PUBLIC_AUTH_TOKEN=$NEXT_PUBLIC_AUTH_TOKEN
+ENV NEXT_PUBLIC_GOOGLE_CLIENT_ID=$NEXT_PUBLIC_GOOGLE_CLIENT_ID
+ENV NEXT_PUBLIC_APP_TIMEZONE=$NEXT_PUBLIC_APP_TIMEZONE
 
 RUN npm run build
 

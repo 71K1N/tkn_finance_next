@@ -1,6 +1,6 @@
 import { http } from "./http";
 import type { BankAccount, BankAccountInput } from "@/lib/types/bank-account";
-import type { DataTableRequestParams, DataTableResponse } from "tikin-ds";
+import type { DataTableRequestParams, DataTableResponse } from "tikin-uai";
 
 const BASE_PATH = "/bank-account";
 

@@ -6,7 +6,9 @@ import DashboardSummaryCard from "@/components/dashboard/DashboardSummaryCard";
 import DashboardTrendChart, { TrendMonth } from "@/components/dashboard/DashboardTrendChart";
 import UpcomingTransactionsCard, { UpcomingTransaction } from "@/components/dashboard/UpcomingTransactionsCard";
 import AddTransactionAction from "@/components/dashboard/AddTransactionAction";
+import { http } from "@/lib/api/http";
 import { useFormatCurrency } from "@/lib/hooks/useFormatCurrency";
+import { formatDateBR, todayLocalISO } from "@/lib/utils/date";
 
 interface Transaction {
     id?: number;
@@ -27,19 +29,6 @@ interface DashboardMetrics {
     rangeLabel: string;
 }
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8081";
-const AUTH_HEADERS = {
-    'Content-Type': 'application/json',
-    'Authorization': `Bearer ${process.env.NEXT_PUBLIC_AUTH_TOKEN ?? "1"}`,
-};
-
-function formatDate(dateString: string): string {
-    const [year, month, day] = dateString.split('-').map(Number);
-    return new Date(year, month - 1, day).toLocaleDateString('pt-BR', {
-        year: 'numeric', month: '2-digit', day: '2-digit'
-    });
-}
-
 function getLastThreeMonths(): { year: number; month: number; label: string }[] {
     const now = new Date();
     return [2, 1, 0].map((offset) => {
@@ -53,7 +42,7 @@ function getLastThreeMonths(): { year: number; month: number; label: string }[] 
 }
 
 function computeMetrics(transactions: Transaction[]): DashboardMetrics {
-    const today = new Date().toISOString().split('T')[0];
+    const today = todayLocalISO();
 
     const debtBalance = transactions
         .filter(t => t.type === 'EXPENSE' && !t.payment_date)
@@ -104,9 +93,7 @@ export default function FinancialDashboard() {
         setLoading(true);
         setError(null);
         try {
-            const response = await fetch(`${API_URL}/transaction`, { headers: AUTH_HEADERS });
-            if (!response.ok) throw new Error(`Erro ao carregar transações: ${response.status}`);
-            const data = await response.json();
+            const data = await http.get<unknown>('/transaction');
             const transactions: Transaction[] = Array.isArray(data) ? data : [];
             setMetrics(computeMetrics(transactions));
         } catch (err) {
@@ -186,7 +173,7 @@ export default function FinancialDashboard() {
                             <UpcomingTransactionsCard
                                 transactions={metrics.upcoming}
                                 formatCurrency={formatCurrency}
-                                formatDate={formatDate}
+                                formatDate={(date) => formatDateBR(date)}
                             />
                         </Box>
                     </SimpleGrid>

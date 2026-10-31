@@ -1,6 +1,6 @@
 import { http } from "./http";
 import type { Category, CategoryInput } from "@/lib/types/category";
-import type { DataTableRequestParams, DataTableResponse } from "tikin-ds";
+import type { DataTableRequestParams, DataTableResponse } from "tikin-uai";
 
 const BASE_PATH = "/category";
 

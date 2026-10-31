@@ -3,7 +3,8 @@ import { useEffect, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { ArrowLeft, Save, Trash2, UserMinus, UserPlus, X } from 'react-feather';
 import swal from 'sweetalert';
-import { Button, DataTable, type DataTableColumn, type DataTableAction, type DataTableHandle } from "tikin-ds";
+import { notifyError, notifySuccess } from "@/lib/ui/notify";
+import { Button, DataTable, type DataTableColumn, type DataTableAction, type DataTableHandle } from "tikin-uai";
 import {
     Box,
     Card,
@@ -44,6 +45,7 @@ import type {
 } from "@/lib/types/shared-expense-group";
 import { useFormatCurrency } from "@/lib/hooks/useFormatCurrency";
 import MoneyInput from "@/components/common/MoneyInput";
+import { formatDateBR } from "@/lib/utils/date";
 
 function MembersTab({ group, onChanged }: { group: ExpenseGroup; onChanged: () => void }) {
     const formatCurrency = useFormatCurrency();
@@ -54,7 +56,7 @@ function MembersTab({ group, onChanged }: { group: ExpenseGroup; onChanged: () =
 
     async function addMember() {
         if (!userId.trim()) {
-            swal("Erro!", "Informe o ID do usuário", "error");
+            notifyError("Informe o ID do usuário");
             return;
         }
         setLoading(true);
@@ -64,12 +66,12 @@ function MembersTab({ group, onChanged }: { group: ExpenseGroup; onChanged: () =
                 share_type: shareType,
                 share_value: shareValue ? Number(shareValue) : undefined,
             });
-            swal("Sucesso!", "Membro adicionado com sucesso!", "success");
+            notifySuccess("Membro adicionado com sucesso!");
             setUserId("");
             setShareValue("");
             onChanged();
         } catch (error) {
-            swal("Erro!", "Não foi possível adicionar o membro", "error");
+            notifyError("Não foi possível adicionar o membro");
         } finally {
             setLoading(false);
         }
@@ -87,10 +89,10 @@ function MembersTab({ group, onChanged }: { group: ExpenseGroup; onChanged: () =
                 setLoading(true);
                 try {
                     await removeGroupMember(group.id, memberUserId);
-                    swal("Sucesso!", "Membro removido com sucesso!", "success");
+                    notifySuccess("Membro removido com sucesso!");
                     onChanged();
                 } catch (error) {
-                    swal("Erro!", "Não foi possível remover (verifique se o saldo está zerado)", "error");
+                    notifyError("Não foi possível remover (verifique se o saldo está zerado)");
                 } finally {
                     setLoading(false);
                 }
@@ -204,17 +206,17 @@ function ExpensesTab({ group }: { group: ExpenseGroup }) {
 
     async function store() {
         if (!description.trim() || amount <= 0) {
-            swal("Erro!", "Informe descrição e um valor positivo", "error");
+            notifyError("Informe descrição e um valor positivo");
             return;
         }
         setLoading(true);
         try {
             await createGroupExpense(group.id, { description, amount, split_type: splitType });
-            swal("Sucesso!", "Despesa lançada e dividida entre os membros!", "success");
+            notifySuccess("Despesa lançada e dividida entre os membros!");
             clearForm();
             tableRef.current?.refetch();
         } catch (error) {
-            swal("Erro!", "Não foi possível lançar a despesa (confira se as cotas dos membros estão configuradas)", "error");
+            notifyError("Não foi possível lançar a despesa (confira se as cotas dos membros estão configuradas)");
         } finally {
             setLoading(false);
         }
@@ -232,10 +234,10 @@ function ExpensesTab({ group }: { group: ExpenseGroup }) {
                 setLoading(true);
                 try {
                     await voidGroupExpense(group.id, item.id);
-                    swal("Sucesso!", "Despesa anulada com sucesso!", "success");
+                    notifySuccess("Despesa anulada com sucesso!");
                     tableRef.current?.refetch();
                 } catch (error) {
-                    swal("Erro!", "Não foi possível anular a despesa", "error");
+                    notifyError("Não foi possível anular a despesa");
                 } finally {
                     setLoading(false);
                 }
@@ -247,7 +249,7 @@ function ExpensesTab({ group }: { group: ExpenseGroup }) {
         { key: "description", header: "Descrição", sortable: true },
         { key: "amount", header: "Valor", sortable: true, render: (row) => formatCurrency(row.amount) },
         { key: "paid_by", header: "Pago por" },
-        { key: "expense_date", header: "Data", render: (row) => new Date(row.expense_date).toLocaleDateString('pt-BR') },
+        { key: "expense_date", header: "Data", render: (row) => formatDateBR(row.expense_date) },
         { key: "status", header: "Status", render: (row) => <StatusBadge status={row.status === "active" ? "success" : "neutral"}>{row.status === "active" ? "Ativa" : "Anulada"}</StatusBadge> },
     ];
 
@@ -325,7 +327,7 @@ function BalancesTab({ group }: { group: ExpenseGroup }) {
             setBalances(balanceData);
             setSuggestions(suggestionData);
         } catch (error) {
-            swal("Erro!", "Não foi possível carregar os saldos", "error");
+            notifyError("Não foi possível carregar os saldos");
         }
     }
 
@@ -336,20 +338,20 @@ function BalancesTab({ group }: { group: ExpenseGroup }) {
 
     async function settle() {
         if (!toUserId.trim() || amount <= 0) {
-            swal("Erro!", "Informe para quem pagou e um valor positivo", "error");
+            notifyError("Informe para quem pagou e um valor positivo");
             return;
         }
         setLoading(true);
         try {
             await recordSettlement(group.id, { to_user_id: Number(toUserId), amount, note: note || undefined });
-            swal("Sucesso!", "Acerto registrado com sucesso!", "success");
+            notifySuccess("Acerto registrado com sucesso!");
             setToUserId("");
             setAmount(0);
             setNote("");
             loadBalances();
             tableRef.current?.refetch();
         } catch (error) {
-            swal("Erro!", "Não foi possível registrar o acerto", "error");
+            notifyError("Não foi possível registrar o acerto");
         } finally {
             setLoading(false);
         }
@@ -360,7 +362,7 @@ function BalancesTab({ group }: { group: ExpenseGroup }) {
         { key: "to_user_id", header: "Para" },
         { key: "amount", header: "Valor", render: (row) => formatCurrency(row.amount) },
         { key: "note", header: "Nota", render: (row) => row.note ?? "-" },
-        { key: "settled_at", header: "Data", render: (row) => new Date(row.settled_at).toLocaleDateString('pt-BR') },
+        { key: "settled_at", header: "Data", render: (row) => formatDateBR(row.settled_at) },
     ];
 
     return (
@@ -450,7 +452,7 @@ export default function PageSharedExpenseGroupDetail() {
             const data = await getExpenseGroup(params.id);
             setGroup(data);
         } catch (error) {
-            swal("Erro!", "Não foi possível carregar o grupo", "error");
+            notifyError("Não foi possível carregar o grupo");
         } finally {
             setLoading(false);
         }

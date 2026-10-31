@@ -1,6 +1,6 @@
 import { http } from "./http";
 import type { Budget, BudgetInput } from "@/lib/types/budget";
-import type { DataTableRequestParams, DataTableResponse } from "tikin-ds";
+import type { DataTableRequestParams, DataTableResponse } from "tikin-uai";
 
 const BASE_PATH = "/budget";
 

@@ -2,8 +2,9 @@
 import { useRef, useState } from "react";
 import { Edit, Trash2, Save, X, ArrowDownCircle, ArrowUpCircle } from 'react-feather';
 import swal from 'sweetalert';
-import { Button, DataTable, type DataTableColumn, type DataTableAction, type DataTableHandle } from "tikin-ds";
-import { Box, Card, Container, Dialog, Field, Heading, Input, Portal, Progress, SimpleGrid, Stack, Text } from "@chakra-ui/react";
+import { notifyError, notifySuccess } from "@/lib/ui/notify";
+import { Button, DataTable, PageHeader, type DataTableColumn, type DataTableAction, type DataTableHandle } from "tikin-uai";
+import { Card, Container, Dialog, Field, Input, Portal, Progress, SimpleGrid, Stack, Text } from "@chakra-ui/react";
 import {
     createSavingsGoal,
     depositSavingsGoal,
@@ -14,6 +15,7 @@ import {
 } from "@/lib/api/savings-goal";
 import type { SavingsGoal } from "@/lib/types/savings-goal";
 import { useFormatCurrency } from "@/lib/hooks/useFormatCurrency";
+import { formatDateBR } from "@/lib/utils/date";
 import MoneyInput from "@/components/common/MoneyInput";
 
 export default function PageSavingsGoal() {
@@ -58,11 +60,11 @@ export default function PageSavingsGoal() {
         setLoading(true);
         try {
             await createSavingsGoal({ name, targetAmount, monthlyAllocation });
-            swal("Sucesso!", "Meta criada com sucesso!", "success");
+            notifySuccess("Meta criada com sucesso!");
             clearForm();
             tableRef.current?.refetch();
         } catch (error) {
-            swal("Erro!", "Não foi possível criar a meta", "error");
+            notifyError("Não foi possível criar a meta");
         } finally {
             setLoading(false);
         }
@@ -72,11 +74,11 @@ export default function PageSavingsGoal() {
         setLoading(true);
         try {
             await updateSavingsGoal(id, { name, targetAmount, monthlyAllocation });
-            swal("Sucesso!", "Meta atualizada com sucesso!", "success");
+            notifySuccess("Meta atualizada com sucesso!");
             clearForm();
             tableRef.current?.refetch();
         } catch (error) {
-            swal("Erro!", "Não foi possível atualizar a meta", "error");
+            notifyError("Não foi possível atualizar a meta");
         } finally {
             setLoading(false);
         }
@@ -94,10 +96,10 @@ export default function PageSavingsGoal() {
                 setLoading(true);
                 try {
                     await removeSavingsGoal(item.id);
-                    swal("Sucesso!", "Meta excluída com sucesso!", "success");
+                    notifySuccess("Meta excluída com sucesso!");
                     tableRef.current?.refetch();
                 } catch (error) {
-                    swal("Erro!", "Não foi possível excluir a meta", "error");
+                    notifyError("Não foi possível excluir a meta");
                 } finally {
                     setLoading(false);
                 }
@@ -135,11 +137,11 @@ export default function PageSavingsGoal() {
             } else {
                 await withdrawSavingsGoal(movementTarget.id, movementAmount);
             }
-            swal("Sucesso!", movementType === 'deposit' ? "Depósito registrado!" : "Saque registrado!", "success");
+            notifySuccess(movementType === 'deposit' ? "Depósito registrado!" : "Saque registrado!");
             setMovementTarget(null);
             tableRef.current?.refetch();
         } catch (error) {
-            swal("Erro!", "Não foi possível registrar o movimento", "error");
+            notifyError("Não foi possível registrar o movimento");
         } finally {
             setLoading(false);
         }
@@ -184,7 +186,7 @@ export default function PageSavingsGoal() {
             key: "projectedCompletionDate",
             header: "Previsão de Conclusão",
             sortable: true,
-            render: (row) => (row.projectedCompletionDate ? new Date(row.projectedCompletionDate).toLocaleDateString('pt-BR') : "—"),
+            render: (row) => formatDateBR(row.projectedCompletionDate, { year: 'numeric', month: '2-digit', day: '2-digit' }, "—"),
         },
     ];
 
@@ -197,10 +199,7 @@ export default function PageSavingsGoal() {
 
     return (
         <Container maxW="6xl" py={8}>
-            <Box mb={6}>
-                <Heading size="5xl">Metas de Poupança</Heading>
-                <Text color="fg.muted">Gerencie suas metas de poupança e acompanhe o progresso</Text>
-            </Box>
+            <PageHeader title="Metas de Poupança" subtitle="Gerencie suas metas de poupança e acompanhe o progresso" mb={6} />
 
             <Card.Root mb={6}>
                 <Card.Body>

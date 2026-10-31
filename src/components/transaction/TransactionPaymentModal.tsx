@@ -1,12 +1,14 @@
 "use client"
 import { useEffect, useState } from "react";
-import swal from 'sweetalert';
-import { Button } from "tikin-ds";
+import { notifyError, notifySuccess } from "@/lib/ui/notify";
+import { Button } from "tikin-uai";
 import { Dialog, Field, Input, Portal, Stack, Text } from "@chakra-ui/react";
 import { payTransaction } from "@/lib/api/transaction";
 import type { Transaction } from "@/lib/types/transaction";
 import { useFormatCurrency } from "@/lib/hooks/useFormatCurrency";
 import MoneyInput from "@/components/common/MoneyInput";
+import { todayLocalISO } from "@/lib/utils/date";
+import { getErrorMessage } from "@/lib/utils/api-error";
 
 type TransactionPaymentModalProps = {
     transaction: Transaction | null;
@@ -23,7 +25,7 @@ export default function TransactionPaymentModal({ transaction, onClose, onSaved 
     useEffect(() => {
         if (!transaction) return;
         setPaidAmount(transaction.amount);
-        setPaymentDate(new Date().toISOString().split('T')[0]);
+        setPaymentDate(todayLocalISO());
     }, [transaction]);
 
     async function confirmPayment() {
@@ -31,11 +33,17 @@ export default function TransactionPaymentModal({ transaction, onClose, onSaved 
         setLoading(true);
         try {
             await payTransaction(transaction.id, { payment_date: paymentDate, paid_amount: paidAmount });
-            swal("Sucesso!", "Pagamento registrado com sucesso!", "success");
+            notifySuccess("Pagamento registrado com sucesso!");
             onSaved();
             onClose();
         } catch (error) {
-            swal("Erro!", "Não foi possível registrar o pagamento", "error");
+            const message = getErrorMessage(error, "Não foi possível registrar o pagamento", {
+                404: "Transação não encontrada. Ela pode ter sido excluída.",
+                409: "Esta transação já foi paga.",
+            });
+            notifyError(message);
+            onSaved();
+            onClose();
         } finally {
             setLoading(false);
         }

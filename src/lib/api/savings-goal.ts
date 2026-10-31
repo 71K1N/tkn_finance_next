@@ -1,6 +1,6 @@
 import { http } from "./http";
 import type { SavingsGoal, SavingsGoalInput } from "@/lib/types/savings-goal";
-import type { DataTableRequestParams, DataTableResponse } from "tikin-ds";
+import type { DataTableRequestParams, DataTableResponse } from "tikin-uai";
 
 const BASE_PATH = "/savings-goal";
 

@@ -2,8 +2,9 @@
 import { useEffect, useRef, useState } from "react";
 import { Edit, Trash2, Save, X } from 'react-feather';
 import swal from 'sweetalert';
-import { Button, DataTable, type DataTableColumn, type DataTableAction, type DataTableHandle } from "tikin-ds";
-import { Box, Card, Container, Field, Heading, Input, NativeSelect, Progress, SimpleGrid, Stack, Text } from "@chakra-ui/react";
+import { notifyError, notifySuccess } from "@/lib/ui/notify";
+import { Button, DataTable, PageHeader, type DataTableColumn, type DataTableAction, type DataTableHandle } from "tikin-uai";
+import { Card, Container, Field, Input, NativeSelect, Progress, SimpleGrid, Stack, Text } from "@chakra-ui/react";
 import { createBudget, getBudgets, removeBudget, updateBudget } from "@/lib/api/budget";
 import { getCategories } from "@/lib/api/category";
 import type { Budget, RolloverPolicy } from "@/lib/types/budget";
@@ -28,7 +29,7 @@ export default function PageBudget() {
             const response = await getCategories({ page: 1, pageSize: 100 });
             setCategories(response.data);
         } catch (error) {
-            swal("Erro!", "Não foi possível carregar as categorias", "error");
+            notifyError("Não foi possível carregar as categorias");
         }
     }
 
@@ -68,11 +69,11 @@ export default function PageBudget() {
         setLoading(true);
         try {
             await createBudget({ categoryId, month, amount, rolloverPolicy });
-            swal("Sucesso!", "Orçamento criado com sucesso!", "success");
+            notifySuccess("Orçamento criado com sucesso!");
             clearForm();
             tableRef.current?.refetch();
         } catch (error) {
-            swal("Erro!", "Não foi possível criar o orçamento", "error");
+            notifyError("Não foi possível criar o orçamento");
         } finally {
             setLoading(false);
         }
@@ -82,11 +83,11 @@ export default function PageBudget() {
         setLoading(true);
         try {
             await updateBudget(id, { amount, rolloverPolicy });
-            swal("Sucesso!", "Orçamento atualizado com sucesso!", "success");
+            notifySuccess("Orçamento atualizado com sucesso!");
             clearForm();
             tableRef.current?.refetch();
         } catch (error) {
-            swal("Erro!", "Não foi possível atualizar o orçamento", "error");
+            notifyError("Não foi possível atualizar o orçamento");
         } finally {
             setLoading(false);
         }
@@ -104,10 +105,10 @@ export default function PageBudget() {
                 setLoading(true);
                 try {
                     await removeBudget(item.id);
-                    swal("Sucesso!", "Orçamento excluído com sucesso!", "success");
+                    notifySuccess("Orçamento excluído com sucesso!");
                     tableRef.current?.refetch();
                 } catch (error) {
-                    swal("Erro!", "Não foi possível excluir o orçamento", "error");
+                    notifyError("Não foi possível excluir o orçamento");
                 } finally {
                     setLoading(false);
                 }
@@ -172,10 +173,7 @@ export default function PageBudget() {
 
     return (
         <Container maxW="6xl" py={8}>
-            <Box mb={6}>
-                <Heading size="5xl">Orçamentos</Heading>
-                <Text color="fg.muted">Gerencie seus orçamentos mensais por categoria</Text>
-            </Box>
+            <PageHeader title="Orçamentos" subtitle="Gerencie seus orçamentos mensais por categoria" mb={6} />
 
             <Card.Root mb={6}>
                 <Card.Body>

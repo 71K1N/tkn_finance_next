@@ -1,4 +1,5 @@
 "use client"
+import type { Ref } from "react";
 import { Input } from "@chakra-ui/react";
 import { NumericFormat } from "react-number-format";
 
@@ -8,6 +9,7 @@ type MoneyInputProps = {
     allowNegative?: boolean;
     placeholder?: string;
     disabled?: boolean;
+    inputRef?: Ref<HTMLInputElement>;
 };
 
 export default function MoneyInput({
@@ -16,6 +18,7 @@ export default function MoneyInput({
     allowNegative = false,
     placeholder,
     disabled,
+    inputRef,
 }: MoneyInputProps) {
     return (
         <NumericFormat
@@ -29,6 +32,7 @@ export default function MoneyInput({
             allowNegative={allowNegative}
             placeholder={placeholder}
             disabled={disabled}
+            getInputRef={inputRef}
         />
     );
 }

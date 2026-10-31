@@ -1,5 +1,5 @@
 import { http } from "./http";
-import type { DataTableRequestParams, DataTableResponse } from "tikin-ds";
+import type { DataTableRequestParams, DataTableResponse } from "tikin-uai";
 import type {
     AddGroupMemberInput,
     CreateExpenseGroupInput,

@@ -2,8 +2,9 @@
 import { useRef, useState } from "react";
 import { Edit, Trash2, Save, X } from 'react-feather';
 import swal from 'sweetalert';
-import { Button, DataTable, type DataTableColumn, type DataTableAction, type DataTableHandle } from "tikin-ds";
-import { Box, Card, Container, Field, Heading, Input, SimpleGrid, Stack, Text } from "@chakra-ui/react";
+import { notifyError, notifySuccess } from "@/lib/ui/notify";
+import { Button, DataTable, PageHeader, type DataTableColumn, type DataTableAction, type DataTableHandle } from "tikin-uai";
+import { Card, Container, Field, Input, SimpleGrid, Stack } from "@chakra-ui/react";
 import { createCategory, getCategories, removeCategory, updateCategory } from "@/lib/api/category";
 import type { Category } from "@/lib/types/category";
 
@@ -46,11 +47,11 @@ export default function PageCategory() {
         setLoading(true);
         try {
             await createCategory({ name, description });
-            swal("Sucesso!", "Categoria criada com sucesso!", "success");
+            notifySuccess("Categoria criada com sucesso!");
             clearForm();
             tableRef.current?.refetch();
         } catch (error) {
-            swal("Erro!", "Não foi possível criar a categoria", "error");
+            notifyError("Não foi possível criar a categoria");
         } finally {
             setLoading(false);
         }
@@ -60,11 +61,11 @@ export default function PageCategory() {
         setLoading(true);
         try {
             await updateCategory(id, { name, description });
-            swal("Sucesso!", "Categoria atualizada com sucesso!", "success");
+            notifySuccess("Categoria atualizada com sucesso!");
             clearForm();
             tableRef.current?.refetch();
         } catch (error) {
-            swal("Erro!", "Não foi possível atualizar a categoria", "error");
+            notifyError("Não foi possível atualizar a categoria");
         } finally {
             setLoading(false);
         }
@@ -82,10 +83,10 @@ export default function PageCategory() {
                 setLoading(true);
                 try {
                     await removeCategory(item.id);
-                    swal("Sucesso!", "Categoria excluída com sucesso!", "success");
+                    notifySuccess("Categoria excluída com sucesso!");
                     tableRef.current?.refetch();
                 } catch (error) {
-                    swal("Erro!", "Não foi possível excluir a categoria", "error");
+                    notifyError("Não foi possível excluir a categoria");
                 } finally {
                     setLoading(false);
                 }
@@ -118,10 +119,7 @@ export default function PageCategory() {
 
     return (
         <Container maxW="6xl" py={8}>
-            <Box mb={6}>
-                <Heading size="5xl">Categorias</Heading>
-                <Text color="fg.muted">Gerencie suas categorias de forma simples e eficiente</Text>
-            </Box>
+            <PageHeader title="Categorias" subtitle="Gerencie suas categorias de forma simples e eficiente" mb={6} />
 
             <Card.Root mb={6}>
                 <Card.Body>

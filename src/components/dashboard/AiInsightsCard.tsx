@@ -49,19 +49,7 @@ export default function AiInsightsCard() {
     return (
         <Card.Root mb={6}>
             <Card.Body>
-                <Flex justify="space-between" align="center" mb={4}>
-                    <Heading size="md">Insights da IA</Heading>
-                    <IconButton
-                        aria-label="Atualizar insights"
-                        variant="ghost"
-                        size="sm"
-                        onClick={handleRefresh}
-                        loading={refreshing}
-                        disabled={loading}
-                    >
-                        <RefreshCw size={16} />
-                    </IconButton>
-                </Flex>
+                
 
                 {loading && (
                     <Stack gap={2}>
@@ -84,7 +72,7 @@ export default function AiInsightsCard() {
                             <Stack gap={2}>
                                 {insights.highlights.map((highlight, index) => (
                                     <Flex key={index} align="center" gap={2}>
-                                        <StatusBadge status={SEVERITY_STATUS[highlight.severity]}>
+                                        <StatusBadge status={SEVERITY_STATUS[highlight.severity]} variant="outline">
                                             {highlight.severity === "critical" ? "Crítico" : highlight.severity === "warning" ? "Atenção" : "Info"}
                                         </StatusBadge>
                                         <Text fontSize="sm">{highlight.message}</Text>
@@ -92,13 +80,20 @@ export default function AiInsightsCard() {
                                 ))}
                             </Stack>
                         )}
-                        <Box>
-                            <Text fontSize="xs" color="fg.muted">
-                                {insights.source === "template" ? "Gerado automaticamente" : "Gerado por IA"} · {insights.date}
-                            </Text>
-                        </Box>
                     </Stack>
                 )}
+                <Flex justify="end" align="end">
+                    <IconButton
+                        aria-label="Atualizar insights"
+                        variant="ghost"
+                        size="sm"
+                        onClick={handleRefresh}
+                        loading={refreshing}
+                        disabled={loading}
+                    >
+                        <RefreshCw size={16} />
+                    </IconButton>
+                </Flex>
             </Card.Body>
         </Card.Root>
     );

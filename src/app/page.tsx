@@ -8,19 +8,17 @@ import {
 import { Box, Card, Container, Flex, Heading, Progress, SimpleGrid, Stack, Text } from "@chakra-ui/react";
 import StatusBadge from "@/components/StatusBadge";
 import { getTotalBalance } from "@/lib/api/bank-account";
-import { getTransactionSummary, getCategoryBreakdown, getMonthlyTrend, getBalanceEvolution } from "@/lib/api/transaction";
+import { getTransactionSummary, getCategoryBreakdown, getMonthlyTrend, getBalanceEvolution, getDailySummary } from "@/lib/api/transaction";
 import { getSavingsGoals } from "@/lib/api/savings-goal";
-import type { CategoryBreakdown, MonthlyTrendEntry, BalanceEvolutionEntry, TransactionSummary } from "@/lib/types/transaction";
+import type { CategoryBreakdown, MonthlyTrendEntry, BalanceEvolutionEntry, TransactionSummary, DailySummaryEntry } from "@/lib/types/transaction";
 import type { SavingsGoal } from "@/lib/types/savings-goal";
 import AiInsightsCard from "@/components/dashboard/AiInsightsCard";
+import CalendarHeatmap from "@/components/dashboard/CalendarHeatmap";
 import { useFormatCurrency } from "@/lib/hooks/useFormatCurrency";
+import { currentMonthLocal } from "@/lib/utils/date";
 
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8', '#82CA9D', '#FF6B6B'];
 const SAVINGS_RATE_TARGET = 20;
-
-function currentMonthString() {
-    return new Date().toISOString().slice(0, 7);
-}
 
 function calculateProgress(current: number, target: number) {
     if (target <= 0) return 0;
@@ -32,29 +30,41 @@ export default function Home() {
     const [totalBalance, setTotalBalance] = useState(0);
     const [summary, setSummary] = useState<TransactionSummary>({ totalIncome: 0, totalExpenses: 0, balance: 0 });
     const [savingsGoals, setSavingsGoals] = useState<SavingsGoal[]>([]);
-    const [categoryBreakdown, setCategoryBreakdown] = useState<CategoryBreakdown>({ month: currentMonthString(), categories: [] });
+    // Left empty on the server: prerendering runs in the container's timezone (UTC), which
+    // disagrees with the browser's about which month it is. The month is resolved on mount.
+    const [categoryBreakdown, setCategoryBreakdown] = useState<CategoryBreakdown>({ month: "", categories: [] });
     const [monthlyTrend, setMonthlyTrend] = useState<MonthlyTrendEntry[]>([]);
     const [balanceEvolution, setBalanceEvolution] = useState<BalanceEvolutionEntry[]>([]);
+    const [dailySummary, setDailySummary] = useState<DailySummaryEntry[]>([]);
+    const [dailySummaryStatus, setDailySummaryStatus] = useState<"loading" | "ready" | "error">("loading");
+    const heatmapYear = new Date().getFullYear();
 
     useEffect(() => {
-        const month = currentMonthString();
+        const month = currentMonthLocal();
 
         Promise.allSettled([
             getTotalBalance(),
-            getTransactionSummary(month),
+            getTransactionSummary({ month, status: "paid" }),
             getSavingsGoals({ page: 1, pageSize: 100 }),
             getCategoryBreakdown(month),
             getMonthlyTrend(6),
             getBalanceEvolution(6),
-        ]).then(([totalBalanceResult, summaryResult, goalsResult, categoryResult, trendResult, evolutionResult]) => {
+            getDailySummary(`${heatmapYear}-01-01`, `${heatmapYear}-12-31`),
+        ]).then(([totalBalanceResult, summaryResult, goalsResult, categoryResult, trendResult, evolutionResult, dailyResult]) => {
             if (totalBalanceResult.status === "fulfilled") setTotalBalance(totalBalanceResult.value.totalBalance);
             if (summaryResult.status === "fulfilled") setSummary(summaryResult.value);
             if (goalsResult.status === "fulfilled") setSavingsGoals(goalsResult.value.data);
             if (categoryResult.status === "fulfilled") setCategoryBreakdown(categoryResult.value);
             if (trendResult.status === "fulfilled") setMonthlyTrend(trendResult.value);
             if (evolutionResult.status === "fulfilled") setBalanceEvolution(evolutionResult.value);
+            if (dailyResult.status === "fulfilled") {
+                setDailySummary(dailyResult.value);
+                setDailySummaryStatus("ready");
+            } else {
+                setDailySummaryStatus("error");
+            }
         });
-    }, []);
+    }, [heatmapYear]);
 
     const monthlySavings = summary.totalIncome - summary.totalExpenses;
     const savingsRate = summary.totalIncome > 0 ? (monthlySavings / summary.totalIncome) * 100 : 0;
@@ -68,7 +78,6 @@ export default function Home() {
 
             <AiInsightsCard />
 
-            {/* Cards Principais */}
             <SimpleGrid columns={{ base: 1, md: 2, lg: 4 }} gap={4} mb={6}>
                 <Card.Root h="full">
                     <Card.Body>
@@ -105,7 +114,7 @@ export default function Home() {
                                 </Stack>
                             </Box>
                         </Flex>
-                        <Text fontSize="sm" color="fg.muted">Receitas e despesas do mês</Text>
+                        <Text fontSize="sm" color="fg.muted">Já pago/recebido no mês (pode diferir do total em Transações, que inclui pendentes)</Text>
                     </Card.Body>
                 </Card.Root>
 
@@ -280,6 +289,13 @@ export default function Home() {
                     </Card.Body>
                 </Card.Root>
             </SimpleGrid>
+
+            <CalendarHeatmap
+                year={heatmapYear}
+                entries={dailySummary}
+                loading={dailySummaryStatus === "loading"}
+                error={dailySummaryStatus === "error"}
+            />
 
             {/* Histograma de Gastos por Categoria */}
             <Card.Root>

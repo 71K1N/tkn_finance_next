@@ -1,6 +1,6 @@
 import { http } from "./http";
 import type { WishItem, WishItemInput, WishItemStatus } from "@/lib/types/wish-item";
-import type { DataTableRequestParams, DataTableResponse } from "tikin-ds";
+import type { DataTableRequestParams, DataTableResponse } from "tikin-uai";
 
 const BASE_PATH = "/wish-item";
 

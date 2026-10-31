@@ -2,13 +2,15 @@
 import { useRef, useState } from "react";
 import { Edit, Trash2, Save, X } from 'react-feather';
 import swal from 'sweetalert';
-import { Button, DataTable, type DataTableColumn, type DataTableAction, type DataTableHandle } from "tikin-ds";
-import { Box, Card, Container, Field, Heading, Input, NativeSelect, SimpleGrid, Stack, Text } from "@chakra-ui/react";
+import { notifyError, notifySuccess } from "@/lib/ui/notify";
+import { Button, DataTable, PageHeader, type DataTableColumn, type DataTableAction, type DataTableHandle } from "tikin-uai";
+import { Card, Container, Field, Input, NativeSelect, SimpleGrid, Stack } from "@chakra-ui/react";
 import StatusBadge from "@/components/StatusBadge";
 import { createWishItem, getWishItems, removeWishItem, updateWishItem, updateWishItemStatus } from "@/lib/api/wish-item";
 import type { WishItem, WishItemPriority, WishItemStatus } from "@/lib/types/wish-item";
 import { useFormatCurrency } from "@/lib/hooks/useFormatCurrency";
 import MoneyInput from "@/components/common/MoneyInput";
+import { formatDateBR } from "@/lib/utils/date";
 
 const STATUS_LABEL: Record<WishItemStatus, string> = {
     active: "Ativo",
@@ -29,10 +31,6 @@ const PRIORITY_LABEL: Record<WishItemPriority, string> = {
     medium: "Média",
     high: "Alta",
 };
-
-function formatDate(dateString: string) {
-    return new Date(dateString).toLocaleDateString('pt-BR');
-}
 
 export default function PageWishlist() {
     const formatCurrency = useFormatCurrency();
@@ -73,11 +71,11 @@ export default function PageWishlist() {
         setLoading(true);
         try {
             await createWishItem({ name, estimatedCost, targetDate, priority });
-            swal("Sucesso!", "Item criado com sucesso!", "success");
+            notifySuccess("Item criado com sucesso!");
             clearForm();
             tableRef.current?.refetch();
         } catch (error) {
-            swal("Erro!", "Não foi possível criar o item", "error");
+            notifyError("Não foi possível criar o item");
         } finally {
             setLoading(false);
         }
@@ -87,11 +85,11 @@ export default function PageWishlist() {
         setLoading(true);
         try {
             await updateWishItem(id, { name, estimatedCost, targetDate, priority });
-            swal("Sucesso!", "Item atualizado com sucesso!", "success");
+            notifySuccess("Item atualizado com sucesso!");
             clearForm();
             tableRef.current?.refetch();
         } catch (error) {
-            swal("Erro!", "Não foi possível atualizar o item", "error");
+            notifyError("Não foi possível atualizar o item");
         } finally {
             setLoading(false);
         }
@@ -109,10 +107,10 @@ export default function PageWishlist() {
                 setLoading(true);
                 try {
                     await removeWishItem(item.id);
-                    swal("Sucesso!", "Item excluído com sucesso!", "success");
+                    notifySuccess("Item excluído com sucesso!");
                     tableRef.current?.refetch();
                 } catch (error) {
-                    swal("Erro!", "Não foi possível excluir o item", "error");
+                    notifyError("Não foi possível excluir o item");
                 } finally {
                     setLoading(false);
                 }
@@ -125,7 +123,7 @@ export default function PageWishlist() {
             await updateWishItemStatus(item.id, status);
             tableRef.current?.refetch();
         } catch (error) {
-            swal("Erro!", "Não foi possível atualizar o status", "error");
+            notifyError("Não foi possível atualizar o status");
         }
     }
 
@@ -158,7 +156,7 @@ export default function PageWishlist() {
             key: "targetDate",
             header: "Data Alvo",
             sortable: true,
-            render: (row) => formatDate(row.targetDate),
+            render: (row) => formatDateBR(row.targetDate),
         },
         {
             key: "priority",
@@ -193,10 +191,7 @@ export default function PageWishlist() {
 
     return (
         <Container maxW="6xl" py={8}>
-            <Box mb={6}>
-                <Heading size="5xl">Lista de Desejos</Heading>
-                <Text color="fg.muted">Gerencie seus itens de desejo e acompanhe o progresso</Text>
-            </Box>
+            <PageHeader title="Lista de Desejos" subtitle="Gerencie seus itens de desejo e acompanhe o progresso" mb={6} />
 
             <Card.Root mb={6}>
                 <Card.Body>
