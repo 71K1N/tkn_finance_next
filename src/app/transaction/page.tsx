@@ -1,616 +1,382 @@
 "use client"
-import { useEffect, useState, useCallback } from "react";
-import { Trash2, Edit, DollarSign, Search, Save, X, CreditCard, Calendar, Tag, List } from 'react-feather';
+import { Suspense, useCallback, useEffect, useRef, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Trash2, Edit, DollarSign, Plus, List, Calendar, Tag, Filter, Upload } from 'react-feather';
 import swal from 'sweetalert';
-
-interface Transaction {
-    id?: number;
-    name: string;
-    description: string;
-    amount: number;
-    due_date: string;
-    payment_date: string | null;
-    subcategory_id: number;
-    category_id: number;
-    user_id: number;
-    account_id: number;
-    paid_amount: number;
-    type: 'EXPENSE' | 'INCOME';
-}
+import { notifyError, notifySuccess } from "@/lib/ui/notify";
+import { Button, DataTable, PageHeader, type DataTableColumn, type DataTableAction, type DataTableHandle, type DataTableRequestParams } from "tikin-uai";
+import { Card, Container, HStack, Text } from "@chakra-ui/react";
+import StatusBadge from "@/components/StatusBadge";
+import TransactionSummaryCards from "@/components/transaction/TransactionSummaryCards";
+import TransactionFormModal from "@/components/transaction/TransactionFormModal";
+import { TRANSACTIONS_CHANGED_EVENT } from "@/components/transaction/QuickEntryDialog";
+import TransactionPaymentModal from "@/components/transaction/TransactionPaymentModal";
+import TransactionFilterModal from "@/components/transaction/TransactionFilterModal";
+import TransactionActiveFiltersBar from "@/components/transaction/TransactionActiveFiltersBar";
+import { getTransactionSummary, getTransactions, removeTransaction, getPlannedVsUnplanned } from "@/lib/api/transaction";
+import { getCategories } from "@/lib/api/category";
+import { getSubcategories } from "@/lib/api/subcategory";
+import { getBankAccounts } from "@/lib/api/bank-account";
+import type { Transaction, TransactionSummary, TransactionFilters } from "@/lib/types/transaction";
+import type { Category } from "@/lib/types/category";
+import type { Subcategory } from "@/lib/types/subcategory";
+import type { BankAccount } from "@/lib/types/bank-account";
+import { useFormatCurrency } from "@/lib/hooks/useFormatCurrency";
+import { currentMonthRange, formatDateBR, periodFromSearchParams } from "@/lib/utils/date";
+import { getErrorMessage } from "@/lib/utils/api-error";
 
 export default function PageTransaction() {
-    const apiUrl = "http://localhost:8081"
+    // useSearchParams opts the page out of static prerendering unless it sits under a boundary.
+    return (
+        <Suspense fallback={null}>
+            <TransactionPageContent />
+        </Suspense>
+    );
+}
 
-    // Estados para o formulário
-    const [id, setId] = useState<number>(0);
-    const [name, setName] = useState<string>("");
-    const [description, setDescription] = useState<string>("");
-    const [amount, setAmount] = useState<number>(0);
-    const [dueDate, setDueDate] = useState<string>("");
-    const [categoryId, setCategoryId] = useState<number>(0);
-    const [subCategoryId, setSubCategoryId] = useState<number>(0);
-    const [accountId, setAccountId] = useState<number>(0);
-    const [type, setType] = useState<'EXPENSE' | 'INCOME'>('EXPENSE');
-    
-    // Estados para dados relacionados
-    const [categories, setCategories] = useState<any[]>([]);
-    const [subCategories, setSubCategories] = useState<any[]>([]);
-    const [accounts, setAccounts] = useState<any[]>([]);
-    const [transactions, setTransactions] = useState<Transaction[]>([]);
+function TransactionPageContent() {
+    const router = useRouter();
+    const searchParams = useSearchParams();
+    // Period handed over by a link (e.g. the home heatmap's day cells); otherwise the current month.
+    const urlPeriod = periodFromSearchParams(searchParams);
+    const formatCurrency = useFormatCurrency();
+    const [loading, setLoading] = useState<boolean>(false);
 
-    // Novos estados para totalizadores
-    const [totalExpenses, setTotalExpenses] = useState(0)
-    const [totalIncome, setTotalIncome] = useState(0)
-    const [balance, setBalance] = useState(0)
+    const [categories, setCategories] = useState<Category[]>([]);
+    const [subcategories, setSubcategories] = useState<Subcategory[]>([]);
+    const [accounts, setAccounts] = useState<BankAccount[]>([]);
+    const [summary, setSummary] = useState<TransactionSummary | null>(null);
+    const [plannedVsUnplanned, setPlannedVsUnplanned] = useState<{ month: string; planned: { total: number; count: number }; unplanned: { total: number; count: number } } | null>(null);
 
-    // Estados para o modal de pagamento
-    const [showPaymentModal, setShowPaymentModal] = useState(false);
-    const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
-    const [modalPaymentDate, setModalPaymentDate] = useState("");
-    const [modalPaidAmount, setModalPaidAmount] = useState(0);
+    const [formModalOpen, setFormModalOpen] = useState<boolean>(false);
+    const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
+    const [paymentTarget, setPaymentTarget] = useState<Transaction | null>(null);
 
-    async function getAllTransactions() {
-        let response = await fetch(apiUrl + '/transaction', { method: "GET" });
-        setTransactions(await response.json());
+    const [filters, setFilters] = useState<TransactionFilters>(() => urlPeriod ?? currentMonthRange());
+    const [filterModalOpen, setFilterModalOpen] = useState<boolean>(false);
+
+    const tableRef = useRef<DataTableHandle>(null);
+
+    async function loadRelatedData() {
+        const [categoriesResponse, subcategoriesResponse, accountsResponse] = await Promise.all([
+            getCategories({ page: 1, pageSize: 100 }),
+            getSubcategories({ page: 1, pageSize: 100 }),
+            getBankAccounts({ page: 1, pageSize: 100 }),
+        ]);
+        setCategories(categoriesResponse.data);
+        setSubcategories(subcategoriesResponse.data);
+        setAccounts(accountsResponse.data);
     }
 
-    async function getCategories() {
-        let response = await fetch(apiUrl + '/category', { method: "GET" })
-        setCategories(await response.json());
-    }
-
-    async function getSubCategories() {
-        let response = await fetch(apiUrl + '/subcategory', { method: "GET" });
-        setSubCategories(await response.json());
-    }
-
-    async function getAccounts() {
-        let response = await fetch(apiUrl + '/bank-account', { method: "GET" });
-        setAccounts(await response.json());
-    }
-
-    function handleSubmit() {
-        id > 0 ? update() : store();
-    }
-
-    async function store() {
-        const transaction: Transaction = {
-            name,
-            description,
-            amount,
-            due_date: dueDate,
-            payment_date: null,
-            subcategory_id: subCategoryId,
-            category_id: categoryId,
-            user_id: 1, // Temporário - deve vir do contexto de autenticação
-            account_id: accountId,
-            paid_amount: amount,
-            type
-        }
-
-        let response = await fetch(apiUrl + "/transaction", {
-            method: "POST",
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(transaction)
-        });
-
-        if (response.status === 201) {
-            swal("Salvo!", "Transação adicionada com sucesso!", "success");
-            clearForm();
-            getAllTransactions();
-        } else {
-            swal("Erro!", "Erro ao salvar, verifique os dados!", "error");
+    async function loadSummary() {
+        try {
+            const [summaryData, plannedData] = await Promise.all([
+                getTransactionSummary(filters),
+                filters.from ? getPlannedVsUnplanned(filters.from.split('-').slice(0, 2).join('-')) : null,
+            ]);
+            setSummary(summaryData);
+            if (plannedData) {
+                setPlannedVsUnplanned(plannedData);
+            }
+        } catch (error) {
+            // summary is a secondary indicator; failing to load it shouldn't block the page
         }
     }
 
-    async function update() {
-        const transaction = { 
-            name,
-            description,
-            amount,
-            due_date: dueDate,
-            subcategory_id: subCategoryId,
-            account_id: accountId,
-            type
-        }
-        let response = await fetch(`${apiUrl}/transaction/${id}`, {
-            method: "PATCH",
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(transaction)
-        })
-        if (response.status === 200) {
-            swal("Atualizado!", "Transação atualizada com sucesso!", "success");
-        }
-        clearForm();
-        getAllTransactions();
+    const loadTransactions = useCallback(
+        (params: DataTableRequestParams) => getTransactions({
+            ...params,
+            from: filters.from,
+            to: filters.to,
+            category_id: filters.category_id,
+            filters: {
+                ...params.filters,
+                ...(filters.type && { type: filters.type }),
+                ...(filters.account_id && { account_id: filters.account_id }),
+                ...(filters.subcategory_id && { subcategory_id: filters.subcategory_id }),
+                ...(filters.is_planned && { is_planned: filters.is_planned }),
+            },
+        }),
+        [filters],
+    );
+
+    useEffect(() => {
+        loadRelatedData();
+    }, []);
+
+    // The initializer above also runs during prerender, where "now" is the container's
+    // clock (UTC) rather than the user's. They only disagree late in the evening on the
+    // last day of a month — when they do, adopt the browser's range and refetch.
+    useEffect(() => {
+        if (urlPeriod) return;
+        const clientRange = currentMonthRange();
+        setFilters((current) =>
+            current.from === clientRange.from && current.to === clientRange.to
+                ? current
+                : { ...current, ...clientRange },
+        );
+        // Mount-only: later URL changes must not override filters the user has edited.
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
+
+    useEffect(() => {
+        loadSummary();
+    }, [filters]);
+
+    // A transaction saved from the floating button's quick entry shows up without a reload.
+    useEffect(() => {
+        window.addEventListener(TRANSACTIONS_CHANGED_EVENT, handleSaved);
+        return () => window.removeEventListener(TRANSACTIONS_CHANGED_EVENT, handleSaved);
+        // handleSaved closes over `filters` through loadSummary, so re-register when they change.
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [filters]);
+
+    function categoryName(subcategoryId: string | null) {
+        const sub = subcategories.find((s) => s.id === subcategoryId);
+        if (!sub) return "N/A";
+        return categories.find((c) => c.id === sub.categoryId)?.name ?? "N/A";
     }
 
-    async function remove(id: number | undefined) {
+    function subcategoryName(subcategoryId: string | null) {
+        return subcategories.find((s) => s.id === subcategoryId)?.name ?? "N/A";
+    }
+
+    function accountName(accountId: string) {
+        return accounts.find((a) => a.id === accountId)?.description ?? "N/A";
+    }
+
+    function openCreate() {
+        setEditingTransaction(null);
+        setFormModalOpen(true);
+    }
+
+    function edit(item: Transaction) {
+        setEditingTransaction(item);
+        setFormModalOpen(true);
+    }
+
+    async function remove(item: Transaction) {
         swal({
             title: "Confirmação",
-            text: "Confirma a exclusão desta transação?",
+            text: "Tem certeza que deseja excluir esta transação?",
             icon: "warning",
             dangerMode: true,
-        })
-        .then(willDelete => {
+            buttons: ["Cancelar", "Excluir"],
+        }).then(async (willDelete) => {
             if (willDelete) {
-                fetch(`${apiUrl}/transaction/${id}`, { method: 'DELETE' }).then(() => {
-                    swal("Excluído!", "Transação excluída com sucesso!", "success");
-                    getAllTransactions();
-                });
+                setLoading(true);
+                try {
+                    await removeTransaction(item.id);
+                    notifySuccess("Transação excluída com sucesso!");
+                    tableRef.current?.refetch();
+                    loadSummary();
+                } catch (error) {
+                    const message = getErrorMessage(error, "Não foi possível excluir a transação", {
+                        404: "Transação não encontrada. Ela pode já ter sido excluída.",
+                    });
+                    notifyError(message);
+                    tableRef.current?.refetch();
+                } finally {
+                    setLoading(false);
+                }
             }
         });
     }
 
-    function edit(item: Transaction) {
-        setId(item.id || 0);
-        setName(item.name);
-        setDescription(item.description);
-        setCategoryId(item.category_id);
-        setSubCategoryId(item.subcategory_id);
-        setAmount(item.amount);
-        setDueDate(item.due_date);
-        setType(item.type);
-        setAccountId(item.account_id);
+    function openPayment(item: Transaction) {
+        setPaymentTarget(item);
     }
 
-    function clearForm() {
-        setId(0);
-        setName("");
-        setDescription("");
-        setAmount(0);
-        setDueDate("");
-        setCategoryId(0);
-        setSubCategoryId(0);
-        setAccountId(0);
-        setType('EXPENSE');
+    function handleSaved() {
+        tableRef.current?.refetch();
+        loadSummary();
     }
 
-    function handleCategorySelect(e: any) {
-        setCategoryId(Number(e.target.value));
-    }
-
-    function handleSubCategorySelect(e: any) {
-        setSubCategoryId(Number(e.target.value));
-    }
-
-    function getCategoryName(id: number) {
-        const category = categories.find(cat => cat.id === id);
-        return category ? category.name : "N/A";
-    }
-
-    function getSubCategoryName(id: number) {
-        const subCategory = subCategories.find(sub => sub.id === id);
-        return subCategory ? subCategory.name : "N/A";
-    }
-
-    // Função para formatar datas corretamente (resolve problema de "dia antes")
-    function formatDate(dateString: string): string {
-        // Dividir a data em partes para evitar problemas de fuso horário
-        const [year, month, day] = dateString.split('-').map(Number);
-        const date = new Date(year, month - 1, day); // month - 1 porque Date usa 0-11 para meses
+    const columns: DataTableColumn<Transaction>[] = [
+        {
+            key: "name",
+            header: "Nome",
+            sortable: true,
+            render: (row) => (
+                <HStack gap={2}>
+                    <Text>{row.name}</Text>
+                </HStack>
+            ),
+            width: "200px",
+        },
+        {
+            key: "subcategory_id",
+            header: "Categoria",
+            render: (row) => (
+                <HStack gap={2}>
+                    <Text>{categoryName(row.subcategory_id)} - {subcategoryName(row.subcategory_id)}</Text>
+                </HStack>
+            ),
+            width: "200px",
+        },
+        {
+            key: "account_id",
+            header: "Conta",
+            render: (row) => accountName(row.account_id),
+            width: "70px",
+        },
         
-        return date.toLocaleDateString('pt-BR', {
-            year: 'numeric',
-            month: '2-digit',
-            day: '2-digit'
-        });
-    }
+        {
+            key: "due_date",
+            header: "Vencimento",
+            sortable: true,
+            render: (row) => (
+                <HStack gap={2}>
+                    <Text>{formatDateBR(row.due_date)}</Text>
+                </HStack>
+            ),
+            width: "150px",
+        },
+        {
+            key: "payment_date",
+            header: "Data de Pagamento",
+            sortable: true,
+            render: (row) => (
+                <HStack gap={2}>
+                    <Text>{formatDateBR(row.payment_date)}</Text>
+                </HStack>
+            ),
+            width: "170px",
+        },
+        {
+            key: "status",
+            header: "Status",
+            render: (row) => (
+                <StatusBadge status={row.payment_date ? "success" : "warning"} variant="surface">
+                    {row.payment_date ? "Pago" : "Pendente"}
+                </StatusBadge>
+            ),
+            width: "110px",
+        },
+        {
+            key: "is_planned",
+            header: "Intenção",
+            sortable: true,
+            render: (row) => (
+                <StatusBadge status={row.is_planned ? "neutral" : "warning"} variant="surface">
+                    {row.is_planned ? "Planejado" : "Impulsivo"}
+                </StatusBadge>
+            ),
+            width: "150px",
+        },
+        {
+            key: "type",
+            header: "Tipo",
+            sortable: true,
+            render: (row) => (
+                <StatusBadge status={row.type === 'EXPENSE' ? "danger" : "success"} variant="surface">
+                    {row.type === 'EXPENSE' ? "Despesa" : "Receita"}
+                </StatusBadge>
+            ),
+            width: "100px",
+        },
+        {
+            key: "amount",
+            header: "Valor",
+            sortable: true,
+            render: (row) => (
+                <Text color={row.type === 'EXPENSE' ? 'red.solid' : 'green.solid'}>
+                    {formatCurrency(row.amount)}
+                </Text>
+            ),
+            width: "100px",
+        },
+    ];
 
-
-
-    // Função para calcular totalizadores
-    const calculateTotals = useCallback(() => {
-        const expenses = transactions
-            .filter(t => t.type === 'EXPENSE')
-            .reduce((acc, curr) => acc + curr.amount, 0)
-        
-        const income = transactions
-            .filter(t => t.type === 'INCOME')
-            .reduce((acc, curr) => acc + curr.amount, 0)
-        
-        setTotalExpenses(expenses)
-        setTotalIncome(income)
-        setBalance(income - expenses)
-    }, [transactions])
-
-    // Função para abrir modal de pagamento
-    function handleOpenPaymentModal(transaction: Transaction) {
-        setSelectedTransaction(transaction);
-        setModalPaidAmount(transaction.amount);
-        setModalPaymentDate(new Date().toISOString().split('T')[0]);
-        setShowPaymentModal(true);
-    }
-
-    // Função para processar o pagamento
-    async function handlePayment() {
-        if (!selectedTransaction) return;
-
-        const paymentData = {
-            payment_date: modalPaymentDate,
-            paid_amount: modalPaidAmount
-        };
-
-        const response = await fetch(`${apiUrl}/transaction/${selectedTransaction.id}/payment`, {
-            method: 'PATCH',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(paymentData)
-        });
-
-        if (response.status === 200) {
-            swal("Sucesso!", "Pagamento registrado com sucesso!", "success");
-            setShowPaymentModal(false);
-            getAllTransactions();
-        } else {
-            swal("Erro!", "Erro ao registrar pagamento!", "error");
-        }
-    }
-
-    // Atualizar useEffect para incluir cálculo de totais quando transactions mudar
-    useEffect(() => {
-        getCategories();
-        getSubCategories();
-        getAccounts();
-        getAllTransactions();
-    }, [])
-
-    // Efeito separado para calcular totais quando transactions mudar
-    useEffect(() => {
-        calculateTotals();
-    }, [calculateTotals])
+    const actions: DataTableAction<Transaction>[] = [
+        {
+            label: "Registrar Pagamento",
+            icon: <DollarSign size={16} />,
+            isDisabled: (row) => !!row.payment_date,
+            onClick: openPayment,
+        },
+        { label: "Editar", icon: <Edit size={16} />, onClick: edit },
+        { label: "Excluir", icon: <Trash2 size={16} />, variant: "danger", onClick: remove },
+    ];
 
     return (
-        <div className="container-fluid py-4">
-            {/* Cabeçalho com Resumo */}
-            <div className="row mb-4">
-                <div className="col">
-                    <h2 className="mb-0">Transações</h2>
-                    <p className="text-muted">Gerencie suas transações financeiras</p>
-                </div>
-            </div>
+        <Container maxW="6xl" py={8}>
+            <PageHeader
+                title="Transações"
+                subtitle="Gerencie suas transações financeiras"
+                mb={6}
+                actions={
+                    <HStack gap={2} flexWrap="wrap">
+                        <Button variant="outline" onClick={() => setFilterModalOpen(true)} disabled={loading}>
+                            <Filter size={16} />
+                            Filtros
+                        </Button>
+                        <Button variant="outline" onClick={() => router.push("/transaction/import")} disabled={loading}>
+                            <Upload size={16} />
+                            Importar extrato
+                        </Button>
+                        <Button colorPalette="primary" onClick={openCreate} disabled={loading}>
+                            <Plus size={16} />
+                            Nova Transação
+                        </Button>
+                    </HStack>
+                }
+            />
 
-            {/* Formulário */}
-            <div className="card shadow-sm mb-4">
-                <div className="card-body">
-                    <h5 className="card-title mb-4">Nova Transação</h5>
-                    <div className="row g-3">
-                        <div className="col-md-6">
-                            <div className="form-floating">
-                                <input 
-                                    type="text" 
-                                    className="form-control" 
-                                    id="name" 
-                                    placeholder="Nome da transação"
-                                    value={name}
-                                    onChange={(e) => setName(e.target.value)}
-                                />
-                                <label htmlFor="name">Nome</label>
-                            </div>
-                        </div>
-                        <div className="col-md-6">
-                            <div className="form-floating">
-                                <input 
-                                    type="text" 
-                                    className="form-control" 
-                                    id="description" 
-                                    placeholder="Descrição"
-                                    value={description}
-                                    onChange={(e) => setDescription(e.target.value)}
-                                />
-                                <label htmlFor="description">Descrição</label>
-                            </div>
-                        </div>
-                    </div>
+            <TransactionActiveFiltersBar
+                filters={filters}
+                categories={categories}
+                subcategories={subcategories}
+                accounts={accounts}
+                onClear={() => setFilters(currentMonthRange())}
+            />
 
-                    <div className="row g-3 mt-2">
-                        <div className="col-md-3">
-                            <div className="form-floating">
-                                <input 
-                                    type="text" 
-                                    className="form-control" 
-                                    id="amount" 
-                                    placeholder="Valor"
-                                    value={amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                                    onChange={(e) => {
-                                        const value = e.target.value.replace(/\D/g, '') 
-                                        setAmount(Number(value) / 100)
-                                    }}
-                                />
-                                <label htmlFor="amount">Valor</label>
-                            </div>
-                        </div>
-                        <div className="col-md-3">
-                            <div className="form-floating">
-                                <input 
-                                    type="date" 
-                                    className="form-control" 
-                                    id="dueDate"
-                                    value={dueDate}
-                                    onChange={(e) => setDueDate(e.target.value)}
-                                />
-                                <label htmlFor="dueDate">Data Vencimento</label>
-                            </div>
-                        </div>
-                        <div className="col-md-6">
-                            <div className="d-flex align-items-center h-100">
-                                <div className="form-check form-check-inline">
-                                    <input
-                                        className="form-check-input"
-                                        type="radio"
-                                        name="transactionType"
-                                        id="typeExpense"
-                                        value="EXPENSE"
-                                        checked={type === 'EXPENSE'}
-                                        onChange={(e) => setType(e.target.value as 'EXPENSE' | 'INCOME')}
-                                    />
-                                    <label className="form-check-label text-danger" htmlFor="typeExpense">
-                                        <span className="ms-1">Despesa</span>
-                                    </label>
-                                </div>
-                                <div className="form-check form-check-inline">
-                                    <input
-                                        className="form-check-input"
-                                        type="radio"
-                                        name="transactionType"
-                                        id="typeIncome"
-                                        value="INCOME"
-                                        checked={type === 'INCOME'}
-                                        onChange={(e) => setType(e.target.value as 'EXPENSE' | 'INCOME')}
-                                    />
-                                    <label className="form-check-label text-success" htmlFor="typeIncome">
-                                        <span className="ms-1">Receita</span>
-                                    </label>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
+            <TransactionSummaryCards summary={summary} plannedVsUnplanned={plannedVsUnplanned} />
 
-                    <div className="row g-3 mt-2">
-                        <div className="col-md-4">
-                            <div className="form-floating">
-                                <select 
-                                    className="form-select" 
-                                    value={accountId} 
-                                    onChange={(e) => setAccountId(Number(e.target.value))}
-                                >
-                                    <option value="0">Selecione...</option>
-                                    {accounts.map(account => (
-                                        <option key={account.id} value={account.id}>
-                                            {account.description}
-                                        </option>
-                                    ))}
-                                </select>
-                                <label>Conta</label>
-                            </div>
-                        </div>
-                        <div className="col-md-4">
-                            <div className="form-floating">
-                                <select 
-                                    className="form-select" 
-                                    value={categoryId} 
-                                    onChange={(e) => setCategoryId(Number(e.target.value))}
-                                >
-                                    <option value="0">Selecione...</option>
-                                    {categories.map(category => (
-                                        <option key={category.id} value={category.id}>
-                                            {category.name}
-                                        </option>
-                                    ))}
-                                </select>
-                                <label>Categoria</label>
-                            </div>
-                        </div>
-                        <div className="col-md-4">
-                            <div className="form-floating">
-                                <select 
-                                    className="form-select" 
-                                    value={subCategoryId} 
-                                    onChange={(e) => setSubCategoryId(Number(e.target.value))}
-                                >
-                                    <option value="0">Selecione...</option>
-                                    {subCategories
-                                        .filter(sub => sub.categoryId === categoryId)
-                                        .map(sub => (
-                                            <option key={sub.id} value={sub.id}>
-                                                {sub.name}
-                                            </option>
-                                        ))}
-                                </select>
-                                <label>Subcategoria</label>
-                            </div>
-                        </div>
-                    </div>
+            <Card.Root>
+                <Card.Body>
+                    <DataTable<Transaction>
+                        ref={tableRef}
+                        columns={columns}
+                        actions={actions}
+                        rowKey={(row) => row.id}
+                        enableSearch
+                        searchPlaceholder="Buscar transações..."
+                        emptyMessage="Nenhuma transação encontrada"
+                        errorMessage="Não foi possível carregar as transações"
+                        onDataLoading={loadTransactions}
+                        pageSizeOptions={[5, 10, 25, 50]}
+                        height="55vh"
+                    />
+                </Card.Body>
+            </Card.Root>
 
-                    <div className="row mt-4">
-                        <div className="col">
-                            <button 
-                                className="btn btn-primary me-2" 
-                                onClick={handleSubmit}
-                            >
-                                <Save size={16} className="me-1" />
-                                {id > 0 ? 'Atualizar' : 'Salvar'}
-                            </button>
-                            <button 
-                                className="btn btn-outline-secondary" 
-                                onClick={clearForm}
-                            >
-                                <X size={16} className="me-1" />
-                                Cancelar
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            </div>
+            <TransactionFormModal
+                open={formModalOpen}
+                transaction={editingTransaction}
+                categories={categories}
+                subcategories={subcategories}
+                accounts={accounts}
+                onClose={() => setFormModalOpen(false)}
+                onSaved={handleSaved}
+            />
 
-            {/* Lista de Transações */}
-            <div className="card shadow-sm">
-                <div className="card-body">
-                    <div className="row mb-3">
-                        <div className="col">
-                            <div className="input-group">
-                                <span className="input-group-text">
-                                    <Search size={16} />
-                                </span>
-                                <input 
-                                    type="text" 
-                                    className="form-control" 
-                                    placeholder="Buscar transações..." 
-                                />
-                            </div>
-                        </div>
-                    </div>
+            <TransactionPaymentModal
+                transaction={paymentTarget}
+                onClose={() => setPaymentTarget(null)}
+                onSaved={handleSaved}
+            />
 
-                    <div className="table-responsive">
-                        <table className="table table-hover">
-                            <thead className="table-light">
-                                <tr>
-                                    <th>Descrição</th>
-                                    <th>Categoria</th>
-                                    <th>Subcategoria</th>
-                                    <th>Valor</th>
-                                    <th>Vencimento</th>
-                                    <th>Status</th>
-                                    <th>Tipo</th>
-                                    <th className="text-end">Ações</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {transactions.map(item => (
-                                    <tr key={item.id} className={item.payment_date ? 'table-success' : ''}>
-                                        <td>
-                                            <div className="d-flex align-items-center">
-                                                <List size={16} className="me-2 text-primary" />
-                                                {item.name}
-                                            </div>
-                                        </td>
-                                        <td>
-                                            <div className="d-flex align-items-center">
-                                                <Tag size={16} className="me-2 text-secondary" />
-                                                {getCategoryName(item.category_id)}
-                                            </div>
-                                        </td>
-                                        <td>{getSubCategoryName(item.subcategory_id)}</td>
-                                        <td className={item.type === 'EXPENSE' ? 'text-danger' : 'text-success'}>
-                                            R$ {item.amount.toFixed(2)}
-                                        </td>
-                                        <td>
-                                            <div className="d-flex align-items-center">
-                                                <Calendar size={16} className="me-2 text-secondary" />
-                                                {formatDate(item.due_date)}
-                                            </div>
-                                        </td>
-                                        <td>
-                                            {item.payment_date ? (
-                                                <span className="badge bg-success">Pago</span>
-                                            ) : (
-                                                <span className="badge bg-warning">Pendente</span>
-                                            )}
-                                        </td>
-                                        <td>
-                                            <span className={`badge ${item.type === 'EXPENSE' ? 'bg-danger' : 'bg-success'}`}>
-                                                {item.type === 'EXPENSE' ? 'Despesa' : 'Receita'}
-                                            </span>
-                                        </td>
-                                        <td className="text-end">
-                                            <div className="btn-group" role="group">
-                                                {!item.payment_date && (
-                                                    <button 
-                                                        className="btn btn-outline-success btn-sm" 
-                                                        onClick={() => handleOpenPaymentModal(item)}
-                                                        title="Registrar Pagamento"
-                                                    >
-                                                        <DollarSign size={16} />
-                                                    </button>
-                                                )}
-                                                <button 
-                                                    className="btn btn-outline-primary btn-sm" 
-                                                    onClick={() => edit(item)}
-                                                    title="Editar"
-                                                >
-                                                    <Edit size={16} />
-                                                </button>
-                                                <button 
-                                                    className="btn btn-outline-danger btn-sm" 
-                                                    onClick={() => remove(item.id)}
-                                                    title="Excluir"
-                                                >
-                                                    <Trash2 size={16} />
-                                                </button>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-
-            {/* Modal de Pagamento */}
-            {showPaymentModal && (
-                <div className="modal show d-block" tabIndex={-1}>
-                    <div className="modal-dialog">
-                        <div className="modal-content">
-                            <div className="modal-header">
-                                <h5 className="modal-title">Registrar Pagamento</h5>
-                                <button 
-                                    type="button" 
-                                    className="btn-close" 
-                                    onClick={() => setShowPaymentModal(false)}
-                                ></button>
-                            </div>
-                            <div className="modal-body">
-                                <div className="alert alert-info mb-3">
-                                    <h6 className="mb-1">Transação: {selectedTransaction?.name}</h6>
-                                    <div className="small">
-                                        <strong>Valor Original:</strong> R$ {selectedTransaction?.amount.toFixed(2)}
-                                        <br />
-                                        <strong>Vencimento:</strong> {selectedTransaction?.due_date ? formatDate(selectedTransaction.due_date) : 'N/A'}
-                                    </div>
-                                </div>
-
-                                <div className="form-floating mb-3">
-                                    <input 
-                                        type="date" 
-                                        className="form-control" 
-                                        id="modalPaymentDate"
-                                        value={modalPaymentDate}
-                                        onChange={(e) => setModalPaymentDate(e.target.value)}
-                                    />
-                                    <label htmlFor="modalPaymentDate">Data do Pagamento</label>
-                                </div>
-                                <div className="form-floating mb-3">
-                                    <input 
-                                        type="number" 
-                                        className="form-control" 
-                                        id="modalPaidAmount"
-                                        value={modalPaidAmount}
-                                        onChange={(e) => setModalPaidAmount(Number(e.target.value))}
-                                    />
-                                    <label htmlFor="modalPaidAmount">Valor Pago</label>
-                                </div>
-                            </div>
-                            <div className="modal-footer">
-                                <button 
-                                    type="button" 
-                                    className="btn btn-outline-secondary" 
-                                    onClick={() => setShowPaymentModal(false)}
-                                >
-                                    Cancelar
-                                </button>
-                                <button 
-                                    type="button" 
-                                    className="btn btn-primary"
-                                    onClick={handlePayment}
-                                >
-                                    Confirmar Pagamento
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                    <div className="modal-backdrop show"></div>
-                </div>
-            )}
-        </div>
+            <TransactionFilterModal
+                open={filterModalOpen}
+                filters={filters}
+                defaultFilters={currentMonthRange()}
+                categories={categories}
+                subcategories={subcategories}
+                accounts={accounts}
+                onClose={() => setFilterModalOpen(false)}
+                onApply={setFilters}
+            />
+        </Container>
     )
 }

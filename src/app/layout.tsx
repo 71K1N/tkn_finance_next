@@ -1,13 +1,21 @@
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
-import "bootstrap/dist/css/bootstrap.min.css";
-import "./core.css";
-import Navbar from "./components/navbar";
-import FloatingActionButton from './components/FloatingActionButton'
-import Link from "next/link";
-import { Activity, ShoppingBag } from "lucide-react";
+import { Roboto, Montserrat } from "next/font/google";
+import AuthShell from "@/components/AuthShell";
+import Providers from "./providers";
 
-const inter = Inter({ subsets: ["latin"] });
+const roboto = Roboto({
+  subsets: ["latin"],
+  weight: ["400", "500", "700"],
+  variable: "--font-roboto",
+  display: "swap",
+});
+
+const montserrat = Montserrat({
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
+  variable: "--font-montserrat",
+  display: "swap",
+});
 
 export const metadata: Metadata = {
   title: "e-TKN Fin Lite",
@@ -20,13 +28,11 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="pt-BR">
-      <body className={inter.className}>
-        <Navbar/>
-        <div className="container">
-          {children}
-        </div>
-        <FloatingActionButton />
+    <html lang="pt-BR" className={`${roboto.variable} ${montserrat.variable}`}>
+      <body>
+        <Providers>
+          <AuthShell>{children}</AuthShell>
+        </Providers>
       </body>
     </html>
   );

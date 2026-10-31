@@ -1,30 +1,20 @@
 "use client"
-import { useEffect, useState } from "react";
-import { Trash2, Edit, Search, Save, X } from 'react-feather';
+import { useRef, useState } from "react";
+import { Edit, Trash2, Save, X } from 'react-feather';
 import swal from 'sweetalert';
+import { notifyError, notifySuccess } from "@/lib/ui/notify";
+import { Button, DataTable, PageHeader, type DataTableColumn, type DataTableAction, type DataTableHandle } from "tikin-uai";
+import { Card, Container, Field, Input, SimpleGrid, Stack } from "@chakra-ui/react";
+import { createCategory, getCategories, removeCategory, updateCategory } from "@/lib/api/category";
+import type { Category } from "@/lib/types/category";
 
 export default function PageCategory() {
-    const apiUrl = "http://localhost:8081"
     const [name, setName] = useState<string>("");
     const [description, setDescription] = useState<string>("");
-    const [id, setId] = useState<number>(0);
+    const [id, setId] = useState<string>("");
     const [loading, setLoading] = useState<boolean>(false);
-    const [categories, setCategories] = useState<any[]>([]);
-    const [searchTerm, setSearchTerm] = useState<string>("");
     const [errors, setErrors] = useState<{name?: string, description?: string}>({});
-
-    async function getAll() {
-        setLoading(true);
-        try {
-            let response = await fetch(apiUrl + '/category', { method: "GET" });
-            const data = await response.json();
-            setCategories(data);
-        } catch (error) {
-            swal("Erro!", "Não foi possível carregar as categorias", "error");
-        } finally {
-            setLoading(false);
-        }
-    }
+    const tableRef = useRef<DataTableHandle>(null);
 
     function validateForm() {
         const newErrors: {name?: string, description?: string} = {};
@@ -40,15 +30,15 @@ export default function PageCategory() {
 
     function handleSubmit() {
         if (!validateForm()) return;
-        
+
         swal({
             title: "Confirmar",
-            text: id > 0 ? "Deseja atualizar esta categoria?" : "Deseja criar uma nova categoria?",
+            text: id ? "Deseja atualizar esta categoria?" : "Deseja criar uma nova categoria?",
             icon: "question",
             buttons: ["Cancelar", "Confirmar"],
         }).then((willProceed) => {
             if (willProceed) {
-                id > 0 ? update() : store();
+                id ? update() : store();
             }
         });
     }
@@ -56,17 +46,12 @@ export default function PageCategory() {
     async function store() {
         setLoading(true);
         try {
-            const category = { name, description }
-            await fetch(apiUrl + "/category", {
-                method: "POST", 
-                headers: {'Content-Type': 'application/json'}, 
-                body: JSON.stringify(category)
-            });
-            swal("Sucesso!", "Categoria criada com sucesso!", "success");
+            await createCategory({ name, description });
+            notifySuccess("Categoria criada com sucesso!");
             clearForm();
-            getAll();
+            tableRef.current?.refetch();
         } catch (error) {
-            swal("Erro!", "Não foi possível criar a categoria", "error");
+            notifyError("Não foi possível criar a categoria");
         } finally {
             setLoading(false);
         }
@@ -75,23 +60,18 @@ export default function PageCategory() {
     async function update() {
         setLoading(true);
         try {
-            const category = { name, description }
-            await fetch(`${apiUrl}/category/${id}`, {
-                method: "PATCH", 
-                headers: {'Content-Type': 'application/json'}, 
-                body: JSON.stringify(category)
-            });
-            swal("Sucesso!", "Categoria atualizada com sucesso!", "success");
+            await updateCategory(id, { name, description });
+            notifySuccess("Categoria atualizada com sucesso!");
             clearForm();
-            getAll();
+            tableRef.current?.refetch();
         } catch (error) {
-            swal("Erro!", "Não foi possível atualizar a categoria", "error");
+            notifyError("Não foi possível atualizar a categoria");
         } finally {
             setLoading(false);
         }
     }
 
-    async function remove(id:number) {
+    async function remove(item: Category) {
         swal({
             title: "Confirmação",
             text: "Tem certeza que deseja excluir esta categoria?",
@@ -102,11 +82,11 @@ export default function PageCategory() {
             if (willDelete) {
                 setLoading(true);
                 try {
-                    await fetch(`${apiUrl}/category/${id}`, {method:'DELETE'});
-                    swal("Sucesso!", "Categoria excluída com sucesso!", "success");
-                    getAll();
+                    await removeCategory(item.id);
+                    notifySuccess("Categoria excluída com sucesso!");
+                    tableRef.current?.refetch();
                 } catch (error) {
-                    swal("Erro!", "Não foi possível excluir a categoria", "error");
+                    notifyError("Não foi possível excluir a categoria");
                 } finally {
                     setLoading(false);
                 }
@@ -114,171 +94,89 @@ export default function PageCategory() {
         });
     }
 
-    function edit(item:any) {
+    function edit(item: Category) {
         setId(item.id);
         setName(item.name);
         setDescription(item.description);
     }
 
     function clearForm() {
-        setId(0);
+        setId("");
         setName("");
         setDescription("");
         setErrors({});
     }
 
-    const filteredCategories = categories.filter(category => 
-        category.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        category.description.toLowerCase().includes(searchTerm.toLowerCase())
-    );
+    const columns: DataTableColumn<Category>[] = [
+        { key: "name", header: "Nome", sortable: true, },
+        { key: "description", header: "Descrição", },
+    ];
 
-    useEffect(() => {
-        getAll()
-    }, [])
-    
+    const actions: DataTableAction<Category>[] = [
+        { label: "Editar", icon: <Edit size={16} />, onClick: edit },
+        { label: "Excluir", icon: <Trash2 size={16} />, variant: "danger", onClick: remove },
+    ];
+
     return (
-        <div className="container-fluid py-4">
-            <div className="row mb-4">
-                <div className="col">
-                    <h2 className="mb-0">Categorias</h2>
-                    <p className="text-muted">Gerencie suas categorias de forma simples e eficiente</p>
-                </div>
-            </div>
-            <div className="card shadow-sm">
-                <div className="card-body">
-                    <div className="row g-3">
-                        <div className="col-md-6">
-                            <div className="form-floating">
-                                <input 
-                                    type="text" 
-                                    className={`form-control ${errors.name ? 'is-invalid' : ''}`}
-                                    id="floatingInput" 
-                                    placeholder="Digite um bom nome para sua categoria" 
-                                    value={name} 
-                                    onChange={(e) => { 
-                                        setName(e.target.value);
-                                        if (errors.name) setErrors({...errors, name: undefined});
-                                    }} 
-                                />
-                                <label htmlFor="floatingInput">Nome</label>
-                                {errors.name && <div className="invalid-feedback">{errors.name}</div>}
-                            </div>
-                        </div>
-                        <div className="col-md-6">
-                            <div className="form-floating">
-                                <input 
-                                    type="text" 
-                                    className={`form-control ${errors.description ? 'is-invalid' : ''}`}
-                                    id="description" 
-                                    placeholder="Digite uma descrição para sua categoria" 
-                                    value={description} 
-                                    onChange={e => { 
-                                        setDescription(e.target.value);
-                                        if (errors.description) setErrors({...errors, description: undefined});
-                                    }} 
-                                />
-                                <label htmlFor="description">Descrição</label>
-                                {errors.description && <div className="invalid-feedback">{errors.description}</div>}
-                            </div>
-                        </div>
-                    </div>
-                    <div className="row mt-3">
-                        <div className="col">
-                            <button 
-                                className="btn btn-primary me-2" 
-                                onClick={handleSubmit}
-                                disabled={loading}
-                            >
-                                <Save size={16} className="me-1" />
-                                {id > 0 ? 'Atualizar' : 'Salvar'}
-                            </button>
-                            <button 
-                                className="btn btn-outline-secondary" 
-                                onClick={clearForm}
-                                disabled={loading}
-                            >
-                                <X size={16} className="me-1" />
-                                Cancelar
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            </div>
+        <Container maxW="6xl" py={8}>
+            <PageHeader title="Categorias" subtitle="Gerencie suas categorias de forma simples e eficiente" mb={6} />
 
-            <div className="card shadow-sm mt-4">
-                <div className="card-body">
-                    <div className="row mb-3">
-                        <div className="col">
-                            <div className="input-group">
-                                <span className="input-group-text">
-                                    <Search size={16} />
-                                </span>
-                                <input 
-                                    type="text" 
-                                    className="form-control" 
-                                    placeholder="Buscar categorias..." 
-                                    value={searchTerm}
-                                    onChange={(e) => setSearchTerm(e.target.value)}
-                                />
-                            </div>
-                        </div>
-                    </div>
+            <Card.Root mb={6}>
+                <Card.Body>
+                    <SimpleGrid columns={{ base: 1, md: 2 }} gap={4}>
+                        <Field.Root invalid={!!errors.name}>
+                            <Field.Label>Nome</Field.Label>
+                            <Input
+                                placeholder="Digite um bom nome para sua categoria"
+                                value={name}
+                                onChange={(e) => {
+                                    setName(e.target.value);
+                                    if (errors.name) setErrors({...errors, name: undefined});
+                                }}
+                            />
+                            {errors.name && <Field.ErrorText>{errors.name}</Field.ErrorText>}
+                        </Field.Root>
+                        <Field.Root invalid={!!errors.description}>
+                            <Field.Label>Descrição</Field.Label>
+                            <Input
+                                placeholder="Digite uma descrição para sua categoria"
+                                value={description}
+                                onChange={(e) => {
+                                    setDescription(e.target.value);
+                                    if (errors.description) setErrors({...errors, description: undefined});
+                                }}
+                            />
+                            {errors.description && <Field.ErrorText>{errors.description}</Field.ErrorText>}
+                        </Field.Root>
+                    </SimpleGrid>
+                    <Stack direction="row" gap={2} mt={4} wrap="wrap">
+                        <Button colorPalette="primary" onClick={handleSubmit} disabled={loading}>
+                            <Save size={16} />
+                            {id ? 'Atualizar' : 'Salvar'}
+                        </Button>
+                        <Button variant="outline" onClick={clearForm} disabled={loading}>
+                            <X size={16} />
+                            Cancelar
+                        </Button>
+                    </Stack>
+                </Card.Body>
+            </Card.Root>
 
-                    <div className="table-responsive">
-                        <table className="table table-hover">
-                            <thead className="table-light">
-                                <tr>
-                                    <th>Nome</th>
-                                    <th>Descrição</th>
-                                    <th className="text-end">Ações</th>
-                                </tr>
-                            </thead>
-                            <tbody>                                    
-                                {loading ? (
-                                    <tr>
-                                        <td colSpan={3} className="text-center py-4">
-                                            <div className="spinner-border text-primary" role="status">
-                                                <span className="visually-hidden">Carregando...</span>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                ) : filteredCategories.length === 0 ? (
-                                    <tr>
-                                        <td colSpan={3} className="text-center py-4">
-                                            Nenhuma categoria encontrada
-                                        </td>
-                                    </tr>
-                                ) : (
-                                    filteredCategories.map(item => (
-                                        <tr key={item.id}>
-                                            <td>{item.name}</td>
-                                            <td>{item.description}</td>
-                                            <td className="text-end">
-                                                <div className="btn-group" role="group">
-                                                    <button 
-                                                        className="btn btn-outline-primary btn-sm" 
-                                                        onClick={() => edit(item)}
-                                                        title="Editar"
-                                                    >
-                                                        <Edit size={16} />
-                                                    </button>
-                                                    <button 
-                                                        className="btn btn-outline-danger btn-sm" 
-                                                        onClick={() => remove(item.id)}
-                                                        title="Excluir"
-                                                    >
-                                                        <Trash2 size={16} />
-                                                    </button>
-                                                </div>
-                                            </td>
-                                        </tr>
-                                    ))
-                                )}
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-        </div>
+            <Card.Root>
+                <Card.Body>
+                    <DataTable<Category>
+                        ref={tableRef}
+                        columns={columns}
+                        actions={actions}
+                        rowKey={(row) => row.id}
+                        enableSearch
+                        searchPlaceholder="Buscar categorias..."
+                        emptyMessage="Nenhuma categoria encontrada"
+                        errorMessage="Não foi possível carregar as categorias"
+                        onDataLoading={getCategories}
+                    />
+                </Card.Body>
+            </Card.Root>
+        </Container>
     )
 }
