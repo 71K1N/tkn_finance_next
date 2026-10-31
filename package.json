@@ -7,7 +7,10 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "deploy:rasp": "bash scripts/deploy-rasp.sh"
+    "deploy:rasp": "bash scripts/deploy-rasp.sh",
+    "prepare": "husky || true",
+    "commitlint": "commitlint --from origin/develop --to HEAD",
+    "release": "commit-and-tag-version"
   },
   "dependencies": {
     "@chakra-ui/react": "^3.36.0",
@@ -23,11 +26,15 @@
     "tikin-uai": "^0.0.7"
   },
   "devDependencies": {
+    "@commitlint/cli": "^20.5.3",
+    "@commitlint/config-conventional": "^20.5.3",
     "@types/node": "^20",
     "@types/react": "^18",
     "@types/react-dom": "^18",
+    "commit-and-tag-version": "^12.7.3",
     "eslint": "^8",
     "eslint-config-next": "14.2.3",
+    "husky": "^9.1.7",
     "typescript": "^5"
   }
 }

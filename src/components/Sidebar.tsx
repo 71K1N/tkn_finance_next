@@ -5,6 +5,7 @@ import { Activity, CreditCard, DollarSign, Eye, EyeOff, Grid, Home, List, LogOut
 import { Box, Drawer, Flex, IconButton, Text, useDisclosure } from '@chakra-ui/react'
 import { useHideValues } from '@/contexts/HideValuesContext'
 import { useAuth } from '@/contexts/AuthContext'
+import { APP_VERSION_LABEL } from '@/lib/version'
 
 type NavItem = { href: string; label: string; icon: typeof Home }
 type NavSection = { title: string; items: NavItem[] }
@@ -162,6 +163,9 @@ function UserFooter({ compact = false }: { compact?: boolean }) {
                 <LogOut size={18} />
                 <Text fontSize="sm" display={labelDisplay} _groupHover={labelGroupHover}>Sair</Text>
             </Flex>
+            <Text fontSize="xs" color="text.muted" px={2} mt={2} display={labelDisplay} _groupHover={labelGroupHover}>
+                v{APP_VERSION_LABEL}
+            </Text>
         </Box>
     )
 }
