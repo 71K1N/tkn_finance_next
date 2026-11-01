@@ -1,5 +1,5 @@
 "use client"
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Save, X } from 'react-feather';
 import swal from 'sweetalert';
 import { notifyError, notifySuccess } from "@/lib/ui/notify";
@@ -13,6 +13,13 @@ import type { BankAccount } from "@/lib/types/bank-account";
 import MoneyInput from "@/components/common/MoneyInput";
 import { projectDueDateToCurrentMonth, todayLocalISO } from "@/lib/utils/date";
 import { getErrorMessage } from "@/lib/utils/api-error";
+import {
+    TRANSACTION_FIELD_ORDER,
+    isDueDateRequired,
+    validateTransaction,
+    type TransactionFieldKey,
+    type TransactionFormErrors,
+} from "@/lib/utils/transaction-validation";
 
 const currencyFormatter = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' });
 
@@ -49,12 +56,26 @@ export default function TransactionFormModal({
     const [paid, setPaid] = useState<boolean>(false);
     const [paymentDate, setPaymentDate] = useState<string>(todayLocalISO());
     const amountInputRef = useRef<HTMLInputElement | null>(null);
+    const nameInputRef = useRef<HTMLInputElement | null>(null);
+    // Points at whichever date input is visible (payment date or due date, never both).
+    const dateInputRef = useRef<HTMLInputElement | null>(null);
+    const accountSelectRef = useRef<HTMLSelectElement | null>(null);
     const [isBill, setIsBill] = useState<boolean>(true);
     const [loading, setLoading] = useState<boolean>(false);
+    // Errors only show after the first save attempt; they are derived, so they re-evaluate on every change.
+    const [submitted, setSubmitted] = useState<boolean>(false);
+
+    const errors = useMemo(
+        () => validateTransaction({ name, amount, accountId, type, paid, isBill, dueDate, paymentDate }),
+        [name, amount, accountId, type, paid, isBill, dueDate, paymentDate],
+    );
+    const visibleErrors: TransactionFormErrors = submitted ? errors : {};
+    const dueDateRequired = isDueDateRequired({ paid, type, isBill });
 
     useEffect(() => {
         if (!open) return;
 
+        setSubmitted(false);
         setPaid(false);
         setPaymentDate(todayLocalISO());
 
@@ -117,7 +138,26 @@ export default function TransactionFormModal({
         setDueDate(projectDueDateToCurrentMonth(suggestion.due_date));
     }
 
-    function handleSubmit() {
+    function focusField(field: TransactionFieldKey) {
+        const refs: Record<TransactionFieldKey, { current: HTMLElement | null }> = {
+            name: nameInputRef,
+            amount: amountInputRef,
+            date: dateInputRef,
+            account: accountSelectRef,
+        };
+        refs[field].current?.focus();
+    }
+
+    // Single entry point for saving (button today, Enter later): validate, then confirm, then call the API.
+    function requestSave() {
+        setSubmitted(true);
+
+        const firstInvalid = TRANSACTION_FIELD_ORDER.find((field) => errors[field]);
+        if (firstInvalid) {
+            focusField(firstInvalid);
+            return;
+        }
+
         swal({
             title: "Confirmar",
             text: transaction ? "Deseja atualizar esta transação?" : "Deseja criar uma nova transação?",
@@ -135,7 +175,7 @@ export default function TransactionFormModal({
         try {
             const computedDueDate = paid ? undefined : (isBill ? (dueDate || undefined) : undefined);
             await createTransaction({
-                name,
+                name: name.trim(),
                 description,
                 amount,
                 due_date: computedDueDate,
@@ -166,7 +206,7 @@ export default function TransactionFormModal({
             const todayISO = todayLocalISO();
             const computedDueDate = paid ? todayISO : (isBill ? (dueDate || undefined) : undefined);
             await updateTransaction(transaction.id, {
-                name,
+                name: name.trim(),
                 description,
                 amount,
                 due_date: computedDueDate,
@@ -206,12 +246,14 @@ export default function TransactionFormModal({
                         </Dialog.Header>
                         <Dialog.Body>
                             <SimpleGrid columns={{ base: 1, md: 2 }} gap={4}>
-                                <Field.Root>
-                                    <Field.Label>Nome</Field.Label>
+                                <Field.Root required invalid={!!visibleErrors.name}>
+                                    <Field.Label>Nome <Field.RequiredIndicator /></Field.Label>
                                     {transaction ? (
-                                        <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Nome da transação" />
+                                        <Input ref={nameInputRef} value={name} onChange={(e) => setName(e.target.value)} placeholder="Nome da transação" />
                                     ) : (
                                         <Autocomplete<Transaction>
+                                            ref={nameInputRef}
+                                            invalid={!!visibleErrors.name}
                                             value={name}
                                             onValueChange={setName}
                                             onSelect={applySuggestion}
@@ -231,6 +273,7 @@ export default function TransactionFormModal({
                                             emptyMessage="Nenhuma transação anterior encontrada"
                                         />
                                     )}
+                                    <Field.ErrorText>{visibleErrors.name}</Field.ErrorText>
                                 </Field.Root>
                                 <Field.Root>
                                     <Field.Label>Descrição</Field.Label>
@@ -239,24 +282,27 @@ export default function TransactionFormModal({
                             </SimpleGrid>
 
                             <SimpleGrid columns={{ base: 1, md: 2 }} gap={4} mt={4}>
-                                <Field.Root>
-                                    <Field.Label>Valor</Field.Label>
+                                <Field.Root required invalid={!!visibleErrors.amount}>
+                                    <Field.Label>Valor <Field.RequiredIndicator /></Field.Label>
                                     <MoneyInput
                                         value={amount}
                                         onValueChange={setAmount}
                                         inputRef={amountInputRef}
                                     />
+                                    <Field.ErrorText>{visibleErrors.amount}</Field.ErrorText>
                                 </Field.Root>
                                 {paid && (
-                                    <Field.Root>
-                                        <Field.Label>Data do pagamento</Field.Label>
-                                        <Input type="date" value={paymentDate} max={todayLocalISO()} onChange={(e) => setPaymentDate(e.target.value)} />
+                                    <Field.Root required invalid={!!visibleErrors.date}>
+                                        <Field.Label>Data do pagamento <Field.RequiredIndicator /></Field.Label>
+                                        <Input ref={dateInputRef} type="date" value={paymentDate} max={todayLocalISO()} onChange={(e) => setPaymentDate(e.target.value)} />
+                                        <Field.ErrorText>{visibleErrors.date}</Field.ErrorText>
                                     </Field.Root>
                                 )}
                                 {!paid && isBill && (
-                                    <Field.Root>
-                                        <Field.Label>Data Vencimento</Field.Label>
-                                        <Input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} />
+                                    <Field.Root required={dueDateRequired} invalid={!!visibleErrors.date}>
+                                        <Field.Label>Data Vencimento <Field.RequiredIndicator /></Field.Label>
+                                        <Input ref={dateInputRef} type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} />
+                                        <Field.ErrorText>{visibleErrors.date}</Field.ErrorText>
                                     </Field.Root>
                                 )}
                             </SimpleGrid>
@@ -290,10 +336,10 @@ export default function TransactionFormModal({
                                         </Stack>
                                     </RadioGroup>
                                 </Field.Root>
-                                <Field.Root>
-                                    <Field.Label>Conta</Field.Label>
+                                <Field.Root required invalid={!!visibleErrors.account}>
+                                    <Field.Label>Conta <Field.RequiredIndicator /></Field.Label>
                                     <NativeSelect.Root>
-                                        <NativeSelect.Field value={accountId} onChange={(e) => setAccountId(e.target.value)}>
+                                        <NativeSelect.Field ref={accountSelectRef} value={accountId} onChange={(e) => setAccountId(e.target.value)}>
                                             <option value="">Selecione...</option>
                                             {accounts.map((account) => (
                                                 <option key={account.id} value={account.id}>{account.description}</option>
@@ -301,6 +347,7 @@ export default function TransactionFormModal({
                                         </NativeSelect.Field>
                                         <NativeSelect.Indicator />
                                     </NativeSelect.Root>
+                                    <Field.ErrorText>{visibleErrors.account}</Field.ErrorText>
                                 </Field.Root>
                             </SimpleGrid>
 
@@ -345,7 +392,7 @@ export default function TransactionFormModal({
                                     <X size={16} />
                                     Cancelar
                                 </Button>
-                                <Button colorPalette="primary" onClick={handleSubmit} disabled={loading}>
+                                <Button colorPalette="primary" onClick={requestSave} disabled={loading}>
                                     <Save size={16} />
                                     {transaction ? 'Atualizar' : 'Salvar'}
                                 </Button>
