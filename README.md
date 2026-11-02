@@ -105,7 +105,7 @@ Build da imagem Docker (o `.git` não vai no contexto, então passe o commit):
 
 ```bash
 docker build \
-  --build-arg GIT_SHA=$(git rev-parse --short HEAD) \
+  --build-arg BUILD_NUMBER=$(git rev-list --count HEAD) \
   --build-arg NEXT_PUBLIC_GOOGLE_CLIENT_ID=<client-id> \
   -t tkn-finance-web .
 ```
