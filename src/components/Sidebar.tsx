@@ -2,7 +2,8 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { Activity, CreditCard, DollarSign, Eye, EyeOff, Grid, Home, List, LogOut, Menu, PieChart, ShoppingBag, Target, Users, X } from 'react-feather'
-import { Box, Drawer, Flex, IconButton, Text, useDisclosure } from '@chakra-ui/react'
+import { Box, Drawer, Flex, IconButton, Portal, Text, Tooltip, useDisclosure } from '@chakra-ui/react'
+import { getInitials } from '@/lib/utils/initials'
 import { useHideValues } from '@/contexts/HideValuesContext'
 import { useAuth } from '@/contexts/AuthContext'
 import { APP_VERSION_LABEL } from '@/lib/version'
@@ -141,29 +142,46 @@ function UserFooter({ compact = false }: { compact?: boolean }) {
     const labelGroupHover = compact ? { display: 'block' } : undefined
 
     return (
-        <Box px={3} mb={4}>
-            {user && (
-                <Box px={2} mb={1} display={labelDisplay} _groupHover={labelGroupHover}>
-                    <Text fontSize="sm" fontWeight="semibold" color="text.heading" truncate>{user.name || user.email}</Text>
-                    {user.name && <Text fontSize="xs" color="text.muted" truncate>{user.email}</Text>}
+        <Box px={3} py={3} mt="auto" borderTop="1px solid" borderColor="sidebar.border">
+            <Flex align="center" gap={3} px={2} justify={compact ? { base: 'center', lg: 'flex-start' } : 'flex-start'} _groupHover={compact ? { justifyContent: 'flex-start' } : undefined}>
+                {user && (
+                    <Flex
+                        flexShrink={0}
+                        align="center"
+                        justify="center"
+                        w={9}
+                        h={9}
+                        borderRadius="full"
+                        bg="brand.primary.subtle"
+                        color="brand.primary"
+                        fontSize="xs"
+                        fontWeight="bold"
+                    >
+                        {getInitials(user.name, user.email)}
+                    </Flex>
+                )}
+                {user && (
+                    <Box flex="1" minW={0} display={labelDisplay} _groupHover={labelGroupHover}>
+                        <Text fontSize="sm" fontWeight="bold" color="text.heading" truncate>{user.name || user.email}</Text>
+                        {user.name && <Text fontSize="xs" color="text.muted" truncate>{user.email}</Text>}
+                    </Box>
+                )}
+                <Box display={labelDisplay} _groupHover={labelGroupHover} flexShrink={0}>
+                    <Tooltip.Root openDelay={200}>
+                        <Tooltip.Trigger asChild>
+                            <IconButton aria-label="Sair" variant="ghost" size="sm" color="text.muted" _hover={{ color: 'text.heading' }} onClick={logout}>
+                                <LogOut size={18} />
+                            </IconButton>
+                        </Tooltip.Trigger>
+                        <Portal>
+                            <Tooltip.Positioner>
+                                <Tooltip.Content>Sair</Tooltip.Content>
+                            </Tooltip.Positioner>
+                        </Portal>
+                    </Tooltip.Root>
                 </Box>
-            )}
-            <Flex
-                as="button"
-                onClick={logout}
-                align="center"
-                gap={2}
-                px={2}
-                py={2}
-                w="full"
-                borderRadius="md"
-                color="text.muted"
-                _hover={{ color: 'text.heading' }}
-            >
-                <LogOut size={18} />
-                <Text fontSize="sm" display={labelDisplay} _groupHover={labelGroupHover}>Sair</Text>
             </Flex>
-            <Text fontSize="xs" color="text.muted" px={2} mt={2} display={labelDisplay} _groupHover={labelGroupHover}>
+            <Text fontSize="xs" color="text.muted" opacity={0.7} px={2} mt={2} display={labelDisplay} _groupHover={labelGroupHover}>
                 v{APP_VERSION_LABEL}
             </Text>
         </Box>
@@ -189,16 +207,18 @@ export default function Sidebar() {
                 bg="sidebar.bg"
                 borderRight="1px solid"
                 borderColor="sidebar.border"
-                display={{ base: 'none', md: 'block' }}
-                overflowY="auto"
+                display={{ base: 'none', md: 'flex' }}
+                flexDirection="column"
                 overflowX="hidden"
                 zIndex="docked"
                 transition="width 0.2s ease"
                 _hover={{ w: 'sidebar' }}
             >
                 <BrandHeader compact />
-                <NavLinks pathname={pathname} compact />
-                <HideValuesToggle compact />
+                <Box flex="1" minH={0} overflowY="auto" overflowX="hidden">
+                    <NavLinks pathname={pathname} compact />
+                    <HideValuesToggle compact />
+                </Box>
                 <UserFooter compact />
             </Box>
 
@@ -243,7 +263,7 @@ export default function Sidebar() {
                                 </IconButton>
                             </Drawer.CloseTrigger>
                         </Flex>
-                        <Drawer.Body px={0}>
+                        <Drawer.Body px={0} display="flex" flexDirection="column">
                             <NavLinks pathname={pathname} onNavigate={onClose} />
                             <UserFooter />
                         </Drawer.Body>
