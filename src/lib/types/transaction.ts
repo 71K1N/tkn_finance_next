@@ -41,6 +41,19 @@ export type TransactionDraft = {
     account_id: string | null;
 };
 
+export type DueGroup = {
+    /** Sum of `amount` over every transaction in the group, not just the listed `items`. */
+    total: number;
+    count: number;
+    items: Transaction[];
+};
+
+/** Pending transactions: overdue (due before today) and upcoming (due within `days`). */
+export type DueTransactions = {
+    overdue: DueGroup;
+    upcoming: DueGroup & { days: number };
+};
+
 export type PaymentInput = {
     payment_date?: string;
     paid_amount: number;

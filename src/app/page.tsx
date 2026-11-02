@@ -1,5 +1,5 @@
 "use client"
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { DollarSign, TrendingUp, Save, Percent, ArrowUp, ArrowDown, Target } from 'react-feather';
 import {
     PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
@@ -13,6 +13,7 @@ import { getSavingsGoals } from "@/lib/api/savings-goal";
 import type { CategoryBreakdown, MonthlyTrendEntry, BalanceEvolutionEntry, TransactionSummary, DailySummaryEntry } from "@/lib/types/transaction";
 import type { SavingsGoal } from "@/lib/types/savings-goal";
 import AiInsightsCard from "@/components/dashboard/AiInsightsCard";
+import DueTransactionsCard from "@/components/dashboard/DueTransactionsCard";
 import CalendarHeatmap from "@/components/dashboard/CalendarHeatmap";
 import { useFormatCurrency } from "@/lib/hooks/useFormatCurrency";
 import { currentMonthLocal } from "@/lib/utils/date";
@@ -39,20 +40,32 @@ export default function Home() {
     const [dailySummaryStatus, setDailySummaryStatus] = useState<"loading" | "ready" | "error">("loading");
     const heatmapYear = new Date().getFullYear();
 
+    // Balance and monthly summary change whenever a payment is registered, so they load
+    // on their own and can be refreshed without refetching the rest of the page.
+    const loadTotals = useCallback(() => {
+        Promise.allSettled([
+            getTotalBalance(),
+            getTransactionSummary({ month: currentMonthLocal(), status: "paid" }),
+        ]).then(([totalBalanceResult, summaryResult]) => {
+            if (totalBalanceResult.status === "fulfilled") setTotalBalance(totalBalanceResult.value.totalBalance);
+            if (summaryResult.status === "fulfilled") setSummary(summaryResult.value);
+        });
+    }, []);
+
+    useEffect(() => {
+        loadTotals();
+    }, [loadTotals]);
+
     useEffect(() => {
         const month = currentMonthLocal();
 
         Promise.allSettled([
-            getTotalBalance(),
-            getTransactionSummary({ month, status: "paid" }),
             getSavingsGoals({ page: 1, pageSize: 100 }),
             getCategoryBreakdown(month),
             getMonthlyTrend(6),
             getBalanceEvolution(6),
             getDailySummary(`${heatmapYear}-01-01`, `${heatmapYear}-12-31`),
-        ]).then(([totalBalanceResult, summaryResult, goalsResult, categoryResult, trendResult, evolutionResult, dailyResult]) => {
-            if (totalBalanceResult.status === "fulfilled") setTotalBalance(totalBalanceResult.value.totalBalance);
-            if (summaryResult.status === "fulfilled") setSummary(summaryResult.value);
+        ]).then(([goalsResult, categoryResult, trendResult, evolutionResult, dailyResult]) => {
             if (goalsResult.status === "fulfilled") setSavingsGoals(goalsResult.value.data);
             if (categoryResult.status === "fulfilled") setCategoryBreakdown(categoryResult.value);
             if (trendResult.status === "fulfilled") setMonthlyTrend(trendResult.value);
@@ -77,6 +90,8 @@ export default function Home() {
             </Box>
 
             <AiInsightsCard />
+
+            <DueTransactionsCard onChanged={loadTotals} />
 
             <SimpleGrid columns={{ base: 1, md: 2, lg: 4 }} gap={4} mb={6}>
                 <Card.Root h="full">
