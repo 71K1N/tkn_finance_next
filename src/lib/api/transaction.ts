@@ -10,6 +10,7 @@ import type {
     BalanceEvolutionEntry,
     DailySummaryEntry,
     TransactionDraft,
+    DueTransactions,
 } from "@/lib/types/transaction";
 import type { DataTableRequestParams, DataTableResponse } from "tikin-uai";
 
@@ -61,5 +62,6 @@ export const getTransactionSummary =(params?: Partial<TransactionFilters> & { mo
 export const getCategoryBreakdown = (month?: string) => http.get<CategoryBreakdown>(`${BASE_PATH}/category-breakdown`, month ? { month } : undefined);
 export const getMonthlyTrend = (months?: number) => http.get<MonthlyTrendEntry[]>(`${BASE_PATH}/monthly-trend`, months ? { months } : undefined);
 export const getBalanceEvolution = (months?: number) => http.get<BalanceEvolutionEntry[]>(`${BASE_PATH}/balance-evolution`, months ? { months } : undefined);
+export const getDueTransactions = (days: number) => http.get<DueTransactions>(`${BASE_PATH}/due`, { days });
 export const getDailySummary = (from: string, to: string) => http.get<DailySummaryEntry[]>(`${BASE_PATH}/daily-summary`, { from, to });
 export const getPlannedVsUnplanned = (month?: string) => http.get<{ month: string; planned: { total: number; count: number }; unplanned: { total: number; count: number } }>(`${BASE_PATH}/analysis/planned-vs-unplanned`, month ? { month } : undefined);

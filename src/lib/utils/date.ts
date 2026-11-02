@@ -109,3 +109,24 @@ export function formatDateBR(
 
     return date.toLocaleDateString("pt-BR", { ...options, timeZone: DISPLAY_TIMEZONE });
 }
+
+/** `YYYY-MM-DD` of the day `days` after (or before, if negative) `day`, in local time. */
+export function addDaysISO(day: string, days: number): string {
+    const [year, month, date] = day.split("-").map(Number);
+    return toDateInputValue(new Date(year, month - 1, date + days));
+}
+
+/**
+ * Relative label for a `YYYY-MM-DD` due date against `today` ("hoje", "amanhã",
+ * "em 3 dias", "ontem", "há 4 dias"). Splits the strings manually, never `new Date(string)`.
+ */
+export function relativeDueLabel(dueDate: string, today: string = todayLocalISO()): string {
+    const [dy, dm, dd] = dueDate.split("-").map(Number);
+    const [ty, tm, td] = today.split("-").map(Number);
+    // Math.round absorbs the 23h/25h days around DST changes.
+    const diff = Math.round((new Date(dy, dm - 1, dd).getTime() - new Date(ty, tm - 1, td).getTime()) / 86_400_000);
+    if (diff === 0) return "hoje";
+    if (diff === 1) return "amanhã";
+    if (diff === -1) return "ontem";
+    return diff > 0 ? `em ${diff} dias` : `há ${-diff} dias`;
+}
