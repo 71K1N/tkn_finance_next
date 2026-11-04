@@ -62,6 +62,8 @@ export default function TransactionFormModal({
     const accountSelectRef = useRef<HTMLSelectElement | null>(null);
     const [isBill, setIsBill] = useState<boolean>(true);
     const [loading, setLoading] = useState<boolean>(false);
+    // Synchronous guard: `loading` only updates on the next render, so a fast double click could slip through.
+    const submittingRef = useRef<boolean>(false);
     // Errors only show after the first save attempt; they are derived, so they re-evaluate on every change.
     const [submitted, setSubmitted] = useState<boolean>(false);
 
@@ -148,7 +150,8 @@ export default function TransactionFormModal({
         refs[field].current?.focus();
     }
 
-    // Single entry point for saving (button today, Enter later): validate, then confirm, then call the API.
+    // Single entry point for saving (button today, Enter later): validate, then call the API.
+    // Creating saves directly; editing still asks for confirmation first.
     function requestSave() {
         setSubmitted(true);
 
@@ -158,14 +161,24 @@ export default function TransactionFormModal({
             return;
         }
 
+        if (submittingRef.current) return;
+        submittingRef.current = true;
+
+        if (!transaction) {
+            void store();
+            return;
+        }
+
         swal({
             title: "Confirmar",
-            text: transaction ? "Deseja atualizar esta transação?" : "Deseja criar uma nova transação?",
+            text: "Deseja atualizar esta transação?",
             icon: "question",
             buttons: ["Cancelar", "Confirmar"],
         }).then((willProceed) => {
             if (willProceed) {
-                transaction ? update() : store();
+                void update();
+            } else {
+                submittingRef.current = false;
             }
         });
     }
@@ -195,6 +208,7 @@ export default function TransactionFormModal({
             });
             notifyError(message);
         } finally {
+            submittingRef.current = false;
             setLoading(false);
         }
     }
@@ -226,6 +240,7 @@ export default function TransactionFormModal({
             });
             notifyError(message);
         } finally {
+            submittingRef.current = false;
             setLoading(false);
         }
     }
