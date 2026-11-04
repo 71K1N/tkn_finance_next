@@ -13,6 +13,7 @@ import type { BankAccount } from "@/lib/types/bank-account";
 import MoneyInput from "@/components/common/MoneyInput";
 import { projectDueDateToCurrentMonth, todayLocalISO } from "@/lib/utils/date";
 import { getErrorMessage } from "@/lib/utils/api-error";
+import { getLastAccountId, resolveDefaultAccountId, setLastAccountId } from "@/lib/utils/default-account";
 import {
     TRANSACTION_FIELD_ORDER,
     isDueDateRequired,
@@ -119,6 +120,16 @@ export default function TransactionFormModal({
         }
     }, [open, transaction, draft, subcategories]);
 
+    // Pre-selects the default account on a new transaction. It only fills an empty field, so it never
+    // overrides a draft/suggestion/manual choice, and it re-runs when the reset effect above re-runs
+    // (it blanks the account) or when the accounts finish loading after the modal opened.
+    // Declared after the reset effect so it runs after it within the same commit.
+    useEffect(() => {
+        if (!open || transaction) return;
+        const defaultId = resolveDefaultAccountId(accounts, getLastAccountId());
+        if (defaultId) setAccountId((current) => current || defaultId);
+    }, [open, transaction, draft, subcategories, accounts]);
+
     function categoryOf(suggestion: Transaction): Category | undefined {
         const sub = subcategories.find((s) => s.id === suggestion.subcategory_id);
         return categories.find((c) => c.id === sub?.categoryId);
@@ -198,6 +209,7 @@ export default function TransactionFormModal({
                 account_id: accountId,
                 type,
             });
+            setLastAccountId(accountId);
             notifySuccess("Transação criada com sucesso!");
             onSaved();
             onClose();
