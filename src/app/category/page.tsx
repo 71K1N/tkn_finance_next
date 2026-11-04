@@ -1,7 +1,7 @@
 "use client"
 import { useRef, useState } from "react";
 import { Edit, Trash2, Save, X } from 'react-feather';
-import swal from 'sweetalert';
+import { useConfirm } from "@/components/common/ConfirmProvider";
 import { notifyError, notifySuccess } from "@/lib/ui/notify";
 import { Button, DataTable, PageHeader, type DataTableColumn, type DataTableAction, type DataTableHandle } from "tikin-uai";
 import { Card, Container, Field, Input, SimpleGrid, Stack } from "@chakra-ui/react";
@@ -9,6 +9,7 @@ import { createCategory, getCategories, removeCategory, updateCategory } from "@
 import type { Category } from "@/lib/types/category";
 
 export default function PageCategory() {
+    const confirm = useConfirm();
     const [name, setName] = useState<string>("");
     const [description, setDescription] = useState<string>("");
     const [id, setId] = useState<string>("");
@@ -28,19 +29,16 @@ export default function PageCategory() {
         return Object.keys(newErrors).length === 0;
     }
 
-    function handleSubmit() {
+    async function handleSubmit() {
         if (!validateForm()) return;
 
-        swal({
+        const confirmed = await confirm({
             title: "Confirmar",
             text: id ? "Deseja atualizar esta categoria?" : "Deseja criar uma nova categoria?",
-            icon: "question",
-            buttons: ["Cancelar", "Confirmar"],
-        }).then((willProceed) => {
-            if (willProceed) {
-                id ? update() : store();
-            }
         });
+        if (confirmed) {
+            id ? update() : store();
+        }
     }
 
     async function store() {
@@ -72,26 +70,24 @@ export default function PageCategory() {
     }
 
     async function remove(item: Category) {
-        swal({
+        const confirmed = await confirm({
             title: "Confirmação",
             text: "Tem certeza que deseja excluir esta categoria?",
-            icon: "warning",
-            dangerMode: true,
-            buttons: ["Cancelar", "Excluir"],
-        }).then(async (willDelete) => {
-            if (willDelete) {
-                setLoading(true);
-                try {
-                    await removeCategory(item.id);
-                    notifySuccess("Categoria excluída com sucesso!");
-                    tableRef.current?.refetch();
-                } catch (error) {
-                    notifyError("Não foi possível excluir a categoria");
-                } finally {
-                    setLoading(false);
-                }
-            }
+            confirmLabel: "Excluir",
+            tone: "danger",
         });
+        if (!confirmed) return;
+
+        setLoading(true);
+        try {
+            await removeCategory(item.id);
+            notifySuccess("Categoria excluída com sucesso!");
+            tableRef.current?.refetch();
+        } catch (error) {
+            notifyError("Não foi possível excluir a categoria");
+        } finally {
+            setLoading(false);
+        }
     }
 
     function edit(item: Category) {
