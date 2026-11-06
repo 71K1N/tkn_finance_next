@@ -45,6 +45,13 @@ export type DueGroup = {
     /** Sum of `amount` over every transaction in the group, not just the listed `items`. */
     total: number;
     count: number;
+    /**
+     * Sums of `amount` by type over every transaction in the group (both non-negative;
+     * `total = income + expense`). Optional only while older API builds that don't
+     * send them are still deployed.
+     */
+    income?: number;
+    expense?: number;
     items: Transaction[];
 };
 
