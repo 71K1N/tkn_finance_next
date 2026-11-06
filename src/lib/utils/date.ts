@@ -117,16 +117,20 @@ export function addDaysISO(day: string, days: number): string {
 }
 
 /**
- * Relative label for a `YYYY-MM-DD` due date against `today` ("hoje", "amanhã",
- * "em 3 dias", "ontem", "há 4 dias"). Splits the strings manually, never `new Date(string)`.
+ * Due status of a `YYYY-MM-DD` due date against `today`, with the short date:
+ * "Venceu há 6 dias · 31/10", "Venceu ontem · 05/11", "Vence hoje · 06/11",
+ * "Vence amanhã · 07/11", "Vence em 9 dias · 15/11".
+ * Splits the strings manually, never `new Date(string)`.
  */
-export function relativeDueLabel(dueDate: string, today: string = todayLocalISO()): string {
+export function dueStatusLabel(dueDate: string, today: string = todayLocalISO()): string {
     const [dy, dm, dd] = dueDate.split("-").map(Number);
     const [ty, tm, td] = today.split("-").map(Number);
     // Math.round absorbs the 23h/25h days around DST changes.
     const diff = Math.round((new Date(dy, dm - 1, dd).getTime() - new Date(ty, tm - 1, td).getTime()) / 86_400_000);
-    if (diff === 0) return "hoje";
-    if (diff === 1) return "amanhã";
-    if (diff === -1) return "ontem";
-    return diff > 0 ? `em ${diff} dias` : `há ${-diff} dias`;
+    const relative =
+        diff === 0 ? "Vence hoje"
+            : diff === 1 ? "Vence amanhã"
+                : diff === -1 ? "Venceu ontem"
+                    : diff > 0 ? `Vence em ${diff} dias` : `Venceu há ${-diff} dias`;
+    return `${relative} · ${formatDateBR(dueDate, { day: "2-digit", month: "2-digit" })}`;
 }
