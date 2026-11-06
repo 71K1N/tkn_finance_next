@@ -17,7 +17,8 @@ Vale para o front (`tkn_finance_next`); o back (`tkn_finance_api`) segue o mesmo
 
 | Front | API compatível |
 |---|---|
-| 0.1.x | 0.0.2+ |
+| 0.1.x – 0.2.x | 0.0.2+ |
+| 0.3.x | 0.1.0+ |
 
 ## Release normal
 
