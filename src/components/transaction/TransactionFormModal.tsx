@@ -50,7 +50,9 @@ export default function TransactionFormModal({
     const [description, setDescription] = useState<string>("");
     const [amount, setAmount] = useState<number>(0);
     const [dueDate, setDueDate] = useState<string>("");
-    const [categoryId, setCategoryId] = useState<string>("");
+    // The category is derived from the subcategory (see `categoryId` below); `categoryPick` only holds a
+    // category chosen by hand while no subcategory is selected yet.
+    const [categoryPick, setCategoryPick] = useState<string>("");
     const [subcategoryId, setSubcategoryId] = useState<string>("");
     const [accountId, setAccountId] = useState<string>("");
     const [type, setType] = useState<TransactionType>('EXPENSE');
@@ -74,7 +76,12 @@ export default function TransactionFormModal({
     );
     const visibleErrors: TransactionFormErrors = submitted ? errors : {};
     const dueDateRequired = isDueDateRequired({ paid, type, isBill });
+    // Follows the selected subcategory, so it also resolves when the subcategory list arrives after the form opened.
+    const categoryId = subcategories.find((s) => s.id === subcategoryId)?.categoryId ?? categoryPick;
 
+    // Resets the form only when it opens or when the transaction/draft changes. The related lists
+    // (subcategories, categories, accounts) must stay out of these dependencies: reloading them while the
+    // form is open would wipe what the user typed.
     useEffect(() => {
         if (!open) return;
 
@@ -89,19 +96,17 @@ export default function TransactionFormModal({
             setDueDate(transaction.due_date ?? "");
             setIsBill(!!transaction.due_date);
             setSubcategoryId(transaction.subcategory_id ?? "");
-            const sub = subcategories.find((s) => s.id === transaction.subcategory_id);
-            setCategoryId(sub?.categoryId ?? "");
+            setCategoryPick("");
             setAccountId(transaction.account_id);
             setType(transaction.type);
         } else if (draft) {
-            const sub = subcategories.find((s) => s.id === draft.subcategory_id);
             setName(draft.name ?? "");
             setDescription("");
             setAmount(draft.amount ?? 0);
             setDueDate("");
             setIsBill(true);
-            setSubcategoryId(sub?.id ?? "");
-            setCategoryId(sub?.categoryId ?? "");
+            setSubcategoryId(draft.subcategory_id ?? "");
+            setCategoryPick("");
             setAccountId(draft.account_id ?? "");
             setType(draft.type);
             // The sentence describes something that already happened, so it starts as paid on the stated day.
@@ -113,12 +118,12 @@ export default function TransactionFormModal({
             setAmount(0);
             setDueDate("");
             setIsBill(true);
-            setCategoryId("");
+            setCategoryPick("");
             setSubcategoryId("");
             setAccountId("");
             setType('EXPENSE');
         }
-    }, [open, transaction, draft, subcategories]);
+    }, [open, transaction, draft]);
 
     // Pre-selects the default account on a new transaction. It only fills an empty field, so it never
     // overrides a draft/suggestion/manual choice, and it re-runs when the reset effect above re-runs
@@ -128,7 +133,7 @@ export default function TransactionFormModal({
         if (!open || transaction) return;
         const defaultId = resolveDefaultAccountId(accounts, getLastAccountId());
         if (defaultId) setAccountId((current) => current || defaultId);
-    }, [open, transaction, draft, subcategories, accounts]);
+    }, [open, transaction, draft, accounts]);
 
     function categoryOf(suggestion: Transaction): Category | undefined {
         const sub = subcategories.find((s) => s.id === suggestion.subcategory_id);
@@ -145,7 +150,7 @@ export default function TransactionFormModal({
         setType(suggestion.type);
         setAccountId(suggestion.account_id ?? "");
         setSubcategoryId(sub?.id ?? "");
-        setCategoryId(sub?.categoryId ?? "");
+        setCategoryPick("");
         setPaid(false);
         setIsBill(!!suggestion.due_date);
         setDueDate(projectDueDateToCurrentMonth(suggestion.due_date));
@@ -385,7 +390,7 @@ export default function TransactionFormModal({
                                         <NativeSelect.Field
                                             value={categoryId}
                                             onChange={(e) => {
-                                                setCategoryId(e.target.value);
+                                                setCategoryPick(e.target.value);
                                                 setSubcategoryId("");
                                             }}
                                         >
