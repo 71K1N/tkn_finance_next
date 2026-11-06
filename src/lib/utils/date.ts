@@ -109,3 +109,28 @@ export function formatDateBR(
 
     return date.toLocaleDateString("pt-BR", { ...options, timeZone: DISPLAY_TIMEZONE });
 }
+
+/** `YYYY-MM-DD` of the day `days` after (or before, if negative) `day`, in local time. */
+export function addDaysISO(day: string, days: number): string {
+    const [year, month, date] = day.split("-").map(Number);
+    return toDateInputValue(new Date(year, month - 1, date + days));
+}
+
+/**
+ * Due status of a `YYYY-MM-DD` due date against `today`, with the short date:
+ * "Venceu há 6 dias · 31/10", "Venceu ontem · 05/11", "Vence hoje · 06/11",
+ * "Vence amanhã · 07/11", "Vence em 9 dias · 15/11".
+ * Splits the strings manually, never `new Date(string)`.
+ */
+export function dueStatusLabel(dueDate: string, today: string = todayLocalISO()): string {
+    const [dy, dm, dd] = dueDate.split("-").map(Number);
+    const [ty, tm, td] = today.split("-").map(Number);
+    // Math.round absorbs the 23h/25h days around DST changes.
+    const diff = Math.round((new Date(dy, dm - 1, dd).getTime() - new Date(ty, tm - 1, td).getTime()) / 86_400_000);
+    const relative =
+        diff === 0 ? "Vence hoje"
+            : diff === 1 ? "Vence amanhã"
+                : diff === -1 ? "Venceu ontem"
+                    : diff > 0 ? `Vence em ${diff} dias` : `Venceu há ${-diff} dias`;
+    return `${relative} · ${formatDateBR(dueDate, { day: "2-digit", month: "2-digit" })}`;
+}

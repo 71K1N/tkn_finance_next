@@ -26,12 +26,10 @@ Também há o botão de ocultar valores na Sidebar, que mascara todos os valores
 ## Stack
 
 - [Next.js 14](https://nextjs.org/) (App Router), React 18 e TypeScript
-- [Chakra UI v3](https://www.chakra-ui.com/) com o design system interno [`tikin-uai`](https://www.npmjs.com/package/tikin-uai) (tema, `DataTable`, `PageHeader`)
+- [Chakra UI v3](https://www.chakra-ui.com/) com o design system interno [`tikin-uai`](https://www.npmjs.com/package/tikin-uai) (tema, `DataTable`, `PageHeader`, `Button`, `Badge` e toasts)
 - [Recharts](https://recharts.org/) para os gráficos
-- `react-feather` (ícones) e `sweetalert` (confirmações)
+- `react-feather` (ícones). Confirmações e avisos usam `useConfirm` e `notify*` (toasts do `tikin-uai`); o `sweetalert` ainda existe em algumas páginas legadas
 - Autenticação com Google Identity Services + sessão emitida pela API
-
-> **Migração de UI em andamento:** o app está saindo do Bootstrap 5 para o `tikin-uai`/Chakra. As páginas ainda não migradas importam o próprio CSS do Bootstrap. Detalhes e convenções em [CLAUDE.md](CLAUDE.md).
 
 ## Como rodar
 
@@ -105,7 +103,7 @@ Build da imagem Docker (o `.git` não vai no contexto, então passe o commit):
 
 ```bash
 docker build \
-  --build-arg GIT_SHA=$(git rev-parse --short HEAD) \
+  --build-arg BUILD_NUMBER=$(git rev-list --count HEAD) \
   --build-arg NEXT_PUBLIC_GOOGLE_CLIENT_ID=<client-id> \
   -t tkn-finance-web .
 ```
