@@ -2,6 +2,25 @@
 
 Todas as mudanças relevantes deste projeto. Gerado por `npm run release` — não edite as seções de versões já publicadas.
 
+## [0.3.0](https://github.com/71K1N/tkn_finance_next/compare/v0.2.0...v0.3.0) (2026-11-06)
+
+
+### Funcionalidades
+
+* **common:** add ConfirmDialog/useConfirm and pilot on /category (TKN-26) ([c4584ff](https://github.com/71K1N/tkn_finance_next/commit/c4584ff195a02e9d879bfd7b8401e0ad4f4087f5))
+* **home:** redesign do card Contas a pagar e receber (TKN-60) ([430b9f2](https://github.com/71K1N/tkn_finance_next/commit/430b9f27d18b671ff79deccadacdc61408e454a3))
+* **home:** show overdue and upcoming transactions with quick payment (TKN-59) ([147c991](https://github.com/71K1N/tkn_finance_next/commit/147c991fd10c95e8e47441f33d0abeb1c7e32dd3))
+* **sidebar:** redesign user footer with avatar, icon logout and divider ([8d73e9b](https://github.com/71K1N/tkn_finance_next/commit/8d73e9b0cadf6c0fb48139c8290d60c7d8bb2afe))
+* **transaction:** pre-select default account on new transaction (TKN-13) ([fdc2657](https://github.com/71K1N/tkn_finance_next/commit/fdc2657dec147e5b5b0454d7a8285fbce1b3d7d8))
+* **transaction:** save new transactions without confirmation (TKN-10) ([a487135](https://github.com/71K1N/tkn_finance_next/commit/a487135e590ee398d2330445d4141929190d2812))
+* **transaction:** Tipo como primeiro campo do formulário (TKN-11) ([26ab08d](https://github.com/71K1N/tkn_finance_next/commit/26ab08d6cd5be271c387365452b76da115e02a1d))
+* **transaction:** validação inline dos campos do formulário (TKN-9) ([0418eb4](https://github.com/71K1N/tkn_finance_next/commit/0418eb452195b2eb260f6d5f1344e78fe318c37b))
+
+
+### Correções
+
+* **transaction:** formulário não zera ao recarregar subcategorias (TKN-14) ([63d29cd](https://github.com/71K1N/tkn_finance_next/commit/63d29cd6e3aad1d06d40027c1cfa5a975521fabe))
+
 ## [0.2.0](https://github.com/71K1N/tkn_finance_next/compare/v0.1.0...v0.2.0) (2026-10-31)
 
 
