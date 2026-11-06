@@ -1,10 +1,10 @@
 "use client"
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Save, X } from 'react-feather';
+import { Calendar, Save, X, Zap } from 'react-feather';
 import swal from 'sweetalert';
 import { notifyError, notifySuccess } from "@/lib/ui/notify";
-import { Autocomplete, Button, Radio, RadioGroup, Switch } from "tikin-uai";
-import { Box, Dialog, Field, Input, NativeSelect, Portal, SimpleGrid, Stack, Text } from "@chakra-ui/react";
+import { Autocomplete, Button, Switch } from "tikin-uai";
+import { Box, Dialog, Field, Input, NativeSelect, Portal, RadioCard, SegmentGroup, SimpleGrid, Stack, Text } from "@chakra-ui/react";
 import { createTransaction, searchTransactionSuggestions, updateTransaction } from "@/lib/api/transaction";
 import type { Transaction, TransactionDraft, TransactionType } from "@/lib/types/transaction";
 import type { Category } from "@/lib/types/category";
@@ -17,12 +17,36 @@ import { getLastAccountId, resolveDefaultAccountId, setLastAccountId } from "@/l
 import {
     TRANSACTION_FIELD_ORDER,
     isDueDateRequired,
+    isDueDateVisible,
     validateTransaction,
     type TransactionFieldKey,
     type TransactionFormErrors,
 } from "@/lib/utils/transaction-validation";
 
 const currencyFormatter = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' });
+
+// Options of the type selector; a transfer option (TKN-19) becomes one more entry here.
+// The selected option uses the soft status style (subtle background, colored text and border), like StatusBadge.
+const TYPE_OPTIONS: { value: TransactionType; label: string; status: 'danger' | 'success' }[] = [
+    { value: 'EXPENSE', label: 'Despesa', status: 'danger' },
+    { value: 'INCOME', label: 'Receita', status: 'success' },
+];
+
+// Intent of an unpaid expense (texts and meaning are owned by TKN-16; only the presentation changed here).
+const INTENT_OPTIONS = [
+    {
+        value: 'bill',
+        icon: Calendar,
+        title: 'Conta/Compromisso agendado',
+        description: 'Conta fixa ou despesa planejada, com data de vencimento',
+    },
+    {
+        value: 'purchase',
+        icon: Zap,
+        title: 'Compra/Gasto impulsivo',
+        description: 'Compra espontânea ou despesa sem data fixa',
+    },
+] as const;
 
 type TransactionFormModalProps = {
     open: boolean;
@@ -63,6 +87,8 @@ export default function TransactionFormModal({
     // Points at whichever date input is visible (payment date or due date, never both).
     const dateInputRef = useRef<HTMLInputElement | null>(null);
     const accountSelectRef = useRef<HTMLSelectElement | null>(null);
+    // Focusable (hidden radio) input of each type option, used for the initial focus.
+    const typeInputRefs = useRef<Partial<Record<TransactionType, HTMLInputElement | null>>>({});
     const [isBill, setIsBill] = useState<boolean>(true);
     const [loading, setLoading] = useState<boolean>(false);
     // Synchronous guard: `loading` only updates on the next render, so a fast double click could slip through.
@@ -76,6 +102,9 @@ export default function TransactionFormModal({
     );
     const visibleErrors: TransactionFormErrors = submitted ? errors : {};
     const dueDateRequired = isDueDateRequired({ paid, type, isBill });
+    // Switching the type never touches `isBill`, so the intent choice survives a round trip; this decides the field instead.
+    const dueDateVisible = isDueDateVisible({ paid, type, isBill });
+    const selectedTypeStatus = TYPE_OPTIONS.find((option) => option.value === type)?.status ?? 'danger';
     // Follows the selected subcategory, so it also resolves when the subcategory list arrives after the form opened.
     const categoryId = subcategories.find((s) => s.id === subcategoryId)?.categoryId ?? categoryPick;
 
@@ -202,7 +231,7 @@ export default function TransactionFormModal({
     async function store() {
         setLoading(true);
         try {
-            const computedDueDate = paid ? undefined : (isBill ? (dueDate || undefined) : undefined);
+            const computedDueDate = paid ? undefined : (dueDateVisible ? (dueDate || undefined) : undefined);
             await createTransaction({
                 name: name.trim(),
                 description,
@@ -235,7 +264,7 @@ export default function TransactionFormModal({
         setLoading(true);
         try {
             const todayISO = todayLocalISO();
-            const computedDueDate = paid ? todayISO : (isBill ? (dueDate || undefined) : undefined);
+            const computedDueDate = paid ? todayISO : (dueDateVisible ? (dueDate || undefined) : undefined);
             await updateTransaction(transaction.id, {
                 name: name.trim(),
                 description,
@@ -266,8 +295,13 @@ export default function TransactionFormModal({
         <Dialog.Root
             open={open}
             onOpenChange={(e) => { if (!e.open) onClose(); }}
-            // A draft without an amount asks for it: land on the amount field instead of the first one.
-            initialFocusEl={() => (!transaction && draft && draft.amount == null ? amountInputRef.current : null)}
+            // Focus starts on the selected type option. The type comes from the props, not the state: this runs
+            // before the reset effect applies it. A draft without an amount asks for it, so it lands on the amount.
+            initialFocusEl={() => {
+                if (!transaction && draft && draft.amount == null) return amountInputRef.current;
+                const initialType = transaction?.type ?? draft?.type ?? 'EXPENSE';
+                return typeInputRefs.current[initialType] ?? null;
+            }}
         >
             <Portal>
                 <Dialog.Backdrop />
@@ -277,7 +311,40 @@ export default function TransactionFormModal({
                             <Dialog.Title>{transaction ? 'Editar Transação' : 'Nova Transação'}</Dialog.Title>
                         </Dialog.Header>
                         <Dialog.Body>
-                            <SimpleGrid columns={{ base: 1, md: 2 }} gap={4}>
+                            <Stack gap={4}>
+                                <Field.Root>
+                                    <Field.Label>Tipo</Field.Label>
+                                    <SegmentGroup.Root
+                                        value={type}
+                                        onValueChange={(e) => { if (e.value) setType(e.value as TransactionType); }}
+                                        w="full"
+                                        css={{
+                                            "--segment-indicator-bg": `colors.status.${selectedTypeStatus}.subtle`,
+                                            "--segment-indicator-shadow": `inset 0 0 0 1px var(--chakra-colors-status-${selectedTypeStatus})`,
+                                        }}
+                                    >
+                                        <SegmentGroup.Indicator />
+                                        {TYPE_OPTIONS.map((option) => (
+                                            <SegmentGroup.Item
+                                                key={option.value}
+                                                value={option.value}
+                                                flex="1"
+                                                cursor="pointer"
+                                                fontWeight="medium"
+                                                _checked={{ color: `status.${option.status}` }}
+                                                // The recipe only rings on :focus-visible; the initial programmatic focus
+                                                // after a mouse click would not match it, so ring on any focus.
+                                                css={{ "&:has(input:focus)": { focusRing: "outside" } }}
+                                            >
+                                                <SegmentGroup.ItemText>{option.label}</SegmentGroup.ItemText>
+                                                <SegmentGroup.ItemHiddenInput
+                                                    ref={(el: HTMLInputElement | null) => { typeInputRefs.current[option.value] = el; }}
+                                                />
+                                            </SegmentGroup.Item>
+                                        ))}
+                                    </SegmentGroup.Root>
+                                </Field.Root>
+
                                 <Field.Root required invalid={!!visibleErrors.name}>
                                     <Field.Label>Nome <Field.RequiredIndicator /></Field.Label>
                                     {transaction ? (
@@ -307,22 +374,113 @@ export default function TransactionFormModal({
                                     )}
                                     <Field.ErrorText>{visibleErrors.name}</Field.ErrorText>
                                 </Field.Root>
-                                <Field.Root>
-                                    <Field.Label>Descrição</Field.Label>
-                                    <Input value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Descrição" />
-                                </Field.Root>
-                            </SimpleGrid>
 
-                            <SimpleGrid columns={{ base: 1, md: 2 }} gap={4} mt={4}>
-                                <Field.Root required invalid={!!visibleErrors.amount}>
-                                    <Field.Label>Valor <Field.RequiredIndicator /></Field.Label>
-                                    <MoneyInput
-                                        value={amount}
-                                        onValueChange={setAmount}
-                                        inputRef={amountInputRef}
-                                    />
-                                    <Field.ErrorText>{visibleErrors.amount}</Field.ErrorText>
-                                </Field.Root>
+                                <SimpleGrid columns={{ base: 1, md: 2 }} gap={4}>
+                                    <Field.Root required invalid={!!visibleErrors.amount}>
+                                        <Field.Label>Valor <Field.RequiredIndicator /></Field.Label>
+                                        <MoneyInput
+                                            value={amount}
+                                            onValueChange={setAmount}
+                                            inputRef={amountInputRef}
+                                        />
+                                        <Field.ErrorText>{visibleErrors.amount}</Field.ErrorText>
+                                    </Field.Root>
+                                    <Field.Root required invalid={!!visibleErrors.account}>
+                                        <Field.Label>Conta <Field.RequiredIndicator /></Field.Label>
+                                        <NativeSelect.Root>
+                                            <NativeSelect.Field ref={accountSelectRef} value={accountId} onChange={(e) => setAccountId(e.target.value)}>
+                                                <option value="">Selecione...</option>
+                                                {accounts.map((account) => (
+                                                    <option key={account.id} value={account.id}>{account.description}</option>
+                                                ))}
+                                            </NativeSelect.Field>
+                                            <NativeSelect.Indicator />
+                                        </NativeSelect.Root>
+                                        <Field.ErrorText>{visibleErrors.account}</Field.ErrorText>
+                                    </Field.Root>
+                                </SimpleGrid>
+
+                                {/* Kept as its own row so TKN-15 can swap it for a single combobox. */}
+                                <SimpleGrid columns={{ base: 1, md: 2 }} gap={4}>
+                                    <Field.Root>
+                                        <Field.Label>Categoria</Field.Label>
+                                        <NativeSelect.Root>
+                                            <NativeSelect.Field
+                                                value={categoryId}
+                                                onChange={(e) => {
+                                                    setCategoryPick(e.target.value);
+                                                    setSubcategoryId("");
+                                                }}
+                                            >
+                                                <option value="">Selecione...</option>
+                                                {categories.map((category) => (
+                                                    <option key={category.id} value={category.id}>{category.name}</option>
+                                                ))}
+                                            </NativeSelect.Field>
+                                            <NativeSelect.Indicator />
+                                        </NativeSelect.Root>
+                                    </Field.Root>
+                                    <Field.Root>
+                                        <Field.Label>Subcategoria</Field.Label>
+                                        <NativeSelect.Root>
+                                            <NativeSelect.Field value={subcategoryId} onChange={(e) => setSubcategoryId(e.target.value)}>
+                                                <option value="">Selecione...</option>
+                                                {subcategories
+                                                    .filter((sub) => sub.categoryId === categoryId)
+                                                    .map((sub) => (
+                                                        <option key={sub.id} value={sub.id}>{sub.name}</option>
+                                                    ))}
+                                            </NativeSelect.Field>
+                                            <NativeSelect.Indicator />
+                                        </NativeSelect.Root>
+                                    </Field.Root>
+                                </SimpleGrid>
+
+                                <Switch
+                                    checked={paid}
+                                    onCheckedChange={(e) => setPaid(e.checked)}
+                                    label={type === 'INCOME' ? 'Já foi recebida' : 'Já foi paga'}
+                                />
+
+                                {!paid && type === 'EXPENSE' && (
+                                    <RadioCard.Root
+                                        size="sm"
+                                        value={isBill ? "bill" : "purchase"}
+                                        onValueChange={(e) => setIsBill(e.value === "bill")}
+                                    >
+                                        <RadioCard.Label>Qual é o tipo desta transação?</RadioCard.Label>
+                                        <SimpleGrid columns={{ base: 1, md: 2 }} gap={3}>
+                                            {INTENT_OPTIONS.map((option) => {
+                                                const checked = (option.value === "bill") === isBill;
+                                                const Icon = option.icon;
+                                                return (
+                                                    <RadioCard.Item
+                                                        key={option.value}
+                                                        value={option.value}
+                                                        cursor="pointer"
+                                                        _checked={{
+                                                            borderColor: "brand.primary",
+                                                            bg: "brand.primary.subtle",
+                                                            boxShadow: "0 0 0 1px var(--chakra-colors-brand-primary)",
+                                                        }}
+                                                    >
+                                                        <RadioCard.ItemHiddenInput />
+                                                        <RadioCard.ItemControl alignItems="flex-start" gap={3}>
+                                                            <Box pt="0.5" color={checked ? "brand.primary" : "text.muted"}>
+                                                                <Icon size={18} />
+                                                            </Box>
+                                                            <RadioCard.ItemContent>
+                                                                <RadioCard.ItemText fontWeight="medium">{option.title}</RadioCard.ItemText>
+                                                                <RadioCard.ItemDescription color="text.muted">{option.description}</RadioCard.ItemDescription>
+                                                            </RadioCard.ItemContent>
+                                                        </RadioCard.ItemControl>
+                                                    </RadioCard.Item>
+                                                );
+                                            })}
+                                        </SimpleGrid>
+                                    </RadioCard.Root>
+                                )}
+
                                 {paid && (
                                     <Field.Root required invalid={!!visibleErrors.date}>
                                         <Field.Label>Data do pagamento <Field.RequiredIndicator /></Field.Label>
@@ -330,93 +488,19 @@ export default function TransactionFormModal({
                                         <Field.ErrorText>{visibleErrors.date}</Field.ErrorText>
                                     </Field.Root>
                                 )}
-                                {!paid && isBill && (
+                                {dueDateVisible && (
                                     <Field.Root required={dueDateRequired} invalid={!!visibleErrors.date}>
                                         <Field.Label>Data Vencimento <Field.RequiredIndicator /></Field.Label>
                                         <Input ref={dateInputRef} type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} />
                                         <Field.ErrorText>{visibleErrors.date}</Field.ErrorText>
                                     </Field.Root>
                                 )}
-                            </SimpleGrid>
 
-                            <Switch
-                                mt={4}
-                                checked={paid}
-                                onCheckedChange={(e) => setPaid(e.checked)}
-                                label={type === 'INCOME' ? 'Já foi recebida' : 'Já foi paga'}
-                            />
-
-                            {!paid && type === 'EXPENSE' && (
-                                <Field.Root mt={4}>
-                                    <Field.Label>Qual é o tipo desta transação?</Field.Label>
-                                    <RadioGroup value={isBill ? "bill" : "purchase"} onValueChange={(e) => setIsBill(e.value === "bill")}>
-                                        <Stack gap={2}>
-                                            <Radio value="bill" label="📅 Conta/Compromisso agendado - É uma conta fixa ou despesa planejada com data de vencimento" />
-                                            <Radio value="purchase" label="⚡ Compra/Gasto impulsivo - É uma compra espontânea ou despesa sem data fixa" />
-                                        </Stack>
-                                    </RadioGroup>
-                                </Field.Root>
-                            )}
-
-                            <SimpleGrid columns={{ base: 1, md: 2 }} gap={4} mt={4}>
                                 <Field.Root>
-                                    <Field.Label>Tipo</Field.Label>
-                                    <RadioGroup value={type} onValueChange={(e) => setType(e.value as TransactionType)}>
-                                        <Stack direction="row" gap={4}>
-                                            <Radio value="EXPENSE" label="Despesa" />
-                                            <Radio value="INCOME" label="Receita" />
-                                        </Stack>
-                                    </RadioGroup>
+                                    <Field.Label>Descrição</Field.Label>
+                                    <Input value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Descrição" />
                                 </Field.Root>
-                                <Field.Root required invalid={!!visibleErrors.account}>
-                                    <Field.Label>Conta <Field.RequiredIndicator /></Field.Label>
-                                    <NativeSelect.Root>
-                                        <NativeSelect.Field ref={accountSelectRef} value={accountId} onChange={(e) => setAccountId(e.target.value)}>
-                                            <option value="">Selecione...</option>
-                                            {accounts.map((account) => (
-                                                <option key={account.id} value={account.id}>{account.description}</option>
-                                            ))}
-                                        </NativeSelect.Field>
-                                        <NativeSelect.Indicator />
-                                    </NativeSelect.Root>
-                                    <Field.ErrorText>{visibleErrors.account}</Field.ErrorText>
-                                </Field.Root>
-                            </SimpleGrid>
-
-                            <SimpleGrid columns={{ base: 1, md: 2 }} gap={4} mt={4}>
-                                <Field.Root>
-                                    <Field.Label>Categoria</Field.Label>
-                                    <NativeSelect.Root>
-                                        <NativeSelect.Field
-                                            value={categoryId}
-                                            onChange={(e) => {
-                                                setCategoryPick(e.target.value);
-                                                setSubcategoryId("");
-                                            }}
-                                        >
-                                            <option value="">Selecione...</option>
-                                            {categories.map((category) => (
-                                                <option key={category.id} value={category.id}>{category.name}</option>
-                                            ))}
-                                        </NativeSelect.Field>
-                                        <NativeSelect.Indicator />
-                                    </NativeSelect.Root>
-                                </Field.Root>
-                                <Field.Root>
-                                    <Field.Label>Subcategoria</Field.Label>
-                                    <NativeSelect.Root>
-                                        <NativeSelect.Field value={subcategoryId} onChange={(e) => setSubcategoryId(e.target.value)}>
-                                            <option value="">Selecione...</option>
-                                            {subcategories
-                                                .filter((sub) => sub.categoryId === categoryId)
-                                                .map((sub) => (
-                                                    <option key={sub.id} value={sub.id}>{sub.name}</option>
-                                                ))}
-                                        </NativeSelect.Field>
-                                        <NativeSelect.Indicator />
-                                    </NativeSelect.Root>
-                                </Field.Root>
-                            </SimpleGrid>
+                            </Stack>
                         </Dialog.Body>
                         <Dialog.Footer>
                             <Stack direction="row" gap={2}>
