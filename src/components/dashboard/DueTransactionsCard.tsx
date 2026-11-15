@@ -196,35 +196,35 @@ export default function DueTransactionsCard({ onChanged }: DueTransactionsCardPr
     function renderItem(t: DueItem) {
         const isExpense = t.type === "EXPENSE";
         return (
-            <Flex key={t.id} align="center" gap={3} py={3} wrap={{ base: "wrap", sm: "nowrap" }}>
-                <Flex align="center" gap={3} flex="1" minW={0}>
-                    {isExpense ? (
-                        <IconTile bg="status.danger.subtle" color="status.danger">
-                            <ArrowDownRight size={16} aria-label="Despesa" />
-                        </IconTile>
-                    ) : (
-                        <IconTile bg="status.success.subtle" color="status.success">
-                            <ArrowUpLeft size={16} aria-label="Receita" />
-                        </IconTile>
-                    )}
-                    <Stack gap={0} minW={0}>
-                        <Flex align="center" gap={2} minW={0}>
-                            <Text fontWeight="semibold" color="text.heading" truncate>{t.name}</Text>
-                            {t.overdue && <StatusBadge status="danger" size="sm" flexShrink={0}>Vencida</StatusBadge>}
-                        </Flex>
-                        <Text fontSize="sm" color={t.overdue ? "status.danger" : "text.muted"}>
-                            {t.due_date ? dueStatusLabel(t.due_date, today) : ""}
-                        </Text>
-                    </Stack>
-                </Flex>
-                <Flex align="center" gap={3} flexShrink={0} ml={{ base: 12, sm: 0 }}>
-                    <Text fontWeight="bold" color={isExpense ? "status.danger" : "status.success"}>
+            // Same three columns at every width: the action column is stacked so it never
+            // squeezes the name and due date (a wrapping row with a flex-basis 0 never wraps).
+            <Flex key={t.id} align="center" gap={3} py={3}>
+                {isExpense ? (
+                    <IconTile bg="status.danger.subtle" color="status.danger">
+                        <ArrowDownRight size={16} aria-label="Despesa" />
+                    </IconTile>
+                ) : (
+                    <IconTile bg="status.success.subtle" color="status.success">
+                        <ArrowUpLeft size={16} aria-label="Receita" />
+                    </IconTile>
+                )}
+                <Stack gap={0} flex="1" minW={0}>
+                    <Flex align="center" gap={2} minW={0}>
+                        <Text fontWeight="semibold" color="text.heading" truncate>{t.name}</Text>
+                        {t.overdue && <StatusBadge status="danger" size="sm" flexShrink={0}>Vencida</StatusBadge>}
+                    </Flex>
+                    <Text fontSize="sm" color={t.overdue ? "status.danger" : "text.muted"} truncate>
+                        {t.due_date ? dueStatusLabel(t.due_date, today) : ""}
+                    </Text>
+                </Stack>
+                <Stack gap={1} align="flex-end" flexShrink={0}>
+                    <Text fontWeight="bold" whiteSpace="nowrap" color={isExpense ? "status.danger" : "status.success"}>
                         {isExpense ? "-" : "+"}{formatCurrency(t.amount)}
                     </Text>
-                    <Button size="sm" variant="outline" minW="20" onClick={() => setPaying(t)}>
+                    <Button size="xs" variant="outline" minW="20" onClick={() => setPaying(t)}>
                         {isExpense ? "Pagar" : "Receber"}
                     </Button>
-                </Flex>
+                </Stack>
             </Flex>
         );
     }
