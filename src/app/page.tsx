@@ -28,7 +28,8 @@ function calculateProgress(current: number, target: number) {
 
 export default function Home() {
     const formatCurrency = useFormatCurrency();
-    const [totalBalance, setTotalBalance] = useState(0);
+    // `available` = checking accounts, `invested` = investment accounts.
+    const [balances, setBalances] = useState({ available: 0, invested: 0 });
     const [summary, setSummary] = useState<TransactionSummary>({ totalIncome: 0, totalExpenses: 0, balance: 0 });
     const [savingsGoals, setSavingsGoals] = useState<SavingsGoal[]>([]);
     // Left empty on the server: prerendering runs in the container's timezone (UTC), which
@@ -47,7 +48,11 @@ export default function Home() {
             getTotalBalance(),
             getTransactionSummary({ month: currentMonthLocal(), status: "paid" }),
         ]).then(([totalBalanceResult, summaryResult]) => {
-            if (totalBalanceResult.status === "fulfilled") setTotalBalance(totalBalanceResult.value.totalBalance);
+            if (totalBalanceResult.status === "fulfilled") {
+                const totals = totalBalanceResult.value;
+                // An API older than the account types only sends `totalBalance`: all of it is available.
+                setBalances({ available: totals.available ?? totals.totalBalance, invested: totals.invested ?? 0 });
+            }
             if (summaryResult.status === "fulfilled") setSummary(summaryResult.value);
         });
     }, []);
@@ -101,11 +106,15 @@ export default function Home() {
                                 <DollarSign size={24} />
                             </Box>
                             <Box>
-                                <Text fontSize="sm" fontWeight="semibold" color="fg.muted">Saldo Total</Text>
-                                <Heading size="lg" mt={1}>{formatCurrency(totalBalance)}</Heading>
+                                <Text fontSize="sm" fontWeight="semibold" color="fg.muted">Saldo Disponível</Text>
+                                <Heading size="lg" mt={1}>{formatCurrency(balances.available)}</Heading>
                             </Box>
                         </Flex>
-                        <Text fontSize="sm" color="fg.muted">Saldo em todas as contas</Text>
+                        <Text fontSize="sm" color="fg.muted">
+                            {balances.invested !== 0
+                                ? `Investido: ${formatCurrency(balances.invested)}`
+                                : "Saldo em contas correntes"}
+                        </Text>
                     </Card.Body>
                 </Card.Root>
 

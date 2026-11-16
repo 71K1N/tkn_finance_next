@@ -110,6 +110,19 @@ export function formatDateBR(
     return date.toLocaleDateString("pt-BR", { ...options, timeZone: DISPLAY_TIMEZONE });
 }
 
+/**
+ * `YYYY-MM-DD` for a stored value, for a date input: a bare `YYYY-MM-DD` is kept as is,
+ * an instant (with a time component) is read in DISPLAY_TIMEZONE, like `formatDateBR`.
+ */
+export function toDateInputFromStored(value: string | null | undefined): string {
+    if (!value) return "";
+    if (!value.includes("T")) return value.slice(0, 10);
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return "";
+    // en-CA formats as YYYY-MM-DD.
+    return date.toLocaleDateString("en-CA", { timeZone: DISPLAY_TIMEZONE });
+}
+
 /** `YYYY-MM-DD` of the day `days` after (or before, if negative) `day`, in local time. */
 export function addDaysISO(day: string, days: number): string {
     const [year, month, date] = day.split("-").map(Number);

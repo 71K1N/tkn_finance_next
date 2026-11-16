@@ -1,19 +1,25 @@
 "use client"
 import { useRef, useState } from "react";
 import { CreditCard, Edit, Trash2, Save, X } from 'react-feather';
-import swal from 'sweetalert';
+import { useConfirm } from "@/components/common/ConfirmProvider";
 import { notifyError, notifySuccess } from "@/lib/ui/notify";
 import { Button, DataTable, PageHeader, type DataTableColumn, type DataTableAction, type DataTableHandle } from "tikin-uai";
-import { Card, Container, Field, HStack, Input, SimpleGrid, Stack, Text } from "@chakra-ui/react";
+import { Card, Container, Field, HStack, Input, NativeSelect, SimpleGrid, Stack, Text } from "@chakra-ui/react";
 import { createBankAccount, getBankAccounts, removeBankAccount, updateBankAccount } from "@/lib/api/bank-account";
-import type { BankAccount } from "@/lib/types/bank-account";
+import type { AccountType, BankAccount } from "@/lib/types/bank-account";
 import { useFormatCurrency } from "@/lib/hooks/useFormatCurrency";
 import MoneyInput from "@/components/common/MoneyInput";
+import StatusBadge from "@/components/StatusBadge";
+import { ACCOUNT_TYPE_LABEL, accountTypeOf } from "@/lib/utils/account-type";
+
+const ACCOUNT_TYPES: AccountType[] = ["CHECKING", "INVESTMENT"];
 
 export default function PageAccount() {
     const formatCurrency = useFormatCurrency();
+    const confirm = useConfirm();
     const [description, setDescription] = useState<string>("");
     const [balance, setBalance] = useState<number>(0);
+    const [accountType, setAccountType] = useState<AccountType>("CHECKING");
     const [id, setId] = useState<string>("");
     const [loading, setLoading] = useState<boolean>(false);
     const [errors, setErrors] = useState<{description?: string, balance?: string}>({});
@@ -31,25 +37,22 @@ export default function PageAccount() {
         return Object.keys(newErrors).length === 0;
     }
 
-    function handleSubmit() {
+    async function handleSubmit() {
         if (!validateForm()) return;
 
-        swal({
+        const confirmed = await confirm({
             title: "Confirmar",
             text: id ? "Deseja atualizar esta conta?" : "Deseja criar uma nova conta?",
-            icon: "question",
-            buttons: ["Cancelar", "Confirmar"],
-        }).then((willProceed) => {
-            if (willProceed) {
-                id ? update() : store();
-            }
         });
+        if (confirmed) {
+            id ? update() : store();
+        }
     }
 
     async function store() {
         setLoading(true);
         try {
-            await createBankAccount({ description, balance });
+            await createBankAccount({ description, balance, type: accountType });
             notifySuccess("Conta criada com sucesso!");
             clearForm();
             tableRef.current?.refetch();
@@ -63,7 +66,7 @@ export default function PageAccount() {
     async function update() {
         setLoading(true);
         try {
-            await updateBankAccount(id, { description, balance });
+            await updateBankAccount(id, { description, balance, type: accountType });
             notifySuccess("Conta atualizada com sucesso!");
             clearForm();
             tableRef.current?.refetch();
@@ -75,38 +78,38 @@ export default function PageAccount() {
     }
 
     async function remove(item: BankAccount) {
-        swal({
+        const confirmed = await confirm({
             title: "Confirmação",
             text: "Tem certeza que deseja excluir esta conta?",
-            icon: "warning",
-            dangerMode: true,
-            buttons: ["Cancelar", "Excluir"],
-        }).then(async (willDelete) => {
-            if (willDelete) {
-                setLoading(true);
-                try {
-                    await removeBankAccount(item.id);
-                    notifySuccess("Conta excluída com sucesso!");
-                    tableRef.current?.refetch();
-                } catch (error) {
-                    notifyError("Não foi possível excluir a conta");
-                } finally {
-                    setLoading(false);
-                }
-            }
+            confirmLabel: "Excluir",
+            tone: "danger",
         });
+        if (!confirmed) return;
+
+        setLoading(true);
+        try {
+            await removeBankAccount(item.id);
+            notifySuccess("Conta excluída com sucesso!");
+            tableRef.current?.refetch();
+        } catch (error) {
+            notifyError("Não foi possível excluir a conta");
+        } finally {
+            setLoading(false);
+        }
     }
 
     function edit(item: BankAccount) {
         setId(item.id);
         setDescription(item.description);
         setBalance(item.balance);
+        setAccountType(accountTypeOf(item));
     }
 
     function clearForm() {
         setId("");
         setDescription("");
         setBalance(0);
+        setAccountType("CHECKING");
         setErrors({});
     }
 
@@ -121,6 +124,18 @@ export default function PageAccount() {
                     <Text>{row.description}</Text>
                 </HStack>
             ),
+        },
+        {
+            key: "type",
+            header: "Tipo",
+            render: (row) => {
+                const type = accountTypeOf(row);
+                return (
+                    <StatusBadge status={type === "INVESTMENT" ? "info" : "neutral"} variant="surface">
+                        {ACCOUNT_TYPE_LABEL[type]}
+                    </StatusBadge>
+                );
+            },
         },
         {
             key: "balance",
@@ -145,7 +160,7 @@ export default function PageAccount() {
 
             <Card.Root mb={6}>
                 <Card.Body>
-                    <SimpleGrid columns={{ base: 1, md: 2 }} gap={4}>
+                    <SimpleGrid columns={{ base: 1, md: 3 }} gap={4}>
                         <Field.Root invalid={!!errors.description}>
                             <Field.Label>Descrição</Field.Label>
                             <Input
@@ -157,6 +172,25 @@ export default function PageAccount() {
                                 }}
                             />
                             {errors.description && <Field.ErrorText>{errors.description}</Field.ErrorText>}
+                        </Field.Root>
+                        <Field.Root>
+                            <Field.Label>Tipo</Field.Label>
+                            <NativeSelect.Root>
+                                <NativeSelect.Field
+                                    value={accountType}
+                                    onChange={(e) => setAccountType(e.target.value as AccountType)}
+                                >
+                                    {ACCOUNT_TYPES.map((type) => (
+                                        <option key={type} value={type}>{ACCOUNT_TYPE_LABEL[type]}</option>
+                                    ))}
+                                </NativeSelect.Field>
+                                <NativeSelect.Indicator />
+                            </NativeSelect.Root>
+                            <Field.HelperText>
+                                {accountType === "INVESTMENT"
+                                    ? "Recebe só receitas e transferências, nunca despesas."
+                                    : "Usada para receitas e despesas do dia a dia."}
+                            </Field.HelperText>
                         </Field.Root>
                         <Field.Root invalid={!!errors.balance}>
                             <Field.Label>Saldo</Field.Label>

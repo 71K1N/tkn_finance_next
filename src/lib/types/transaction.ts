@@ -1,4 +1,11 @@
+/** Income or expense: what drafts, filters and reports work with. */
 export type TransactionType = "EXPENSE" | "INCOME";
+
+/**
+ * What a stored transaction can be: income, expense or a transfer between two of the
+ * user's own accounts (lowercase, as the API stores it). Transfers are never income or expense.
+ */
+export type TransactionKind = TransactionType | "transfer";
 
 export type Transaction = {
     id: string;
@@ -11,9 +18,16 @@ export type Transaction = {
     account_id: string;
     target_account_id: string | null;
     paid_amount: number | null;
-    type: TransactionType;
+    type: TransactionKind;
     is_planned?: boolean;
     user_id: number;
+    /** Shared by both legs of a transfer. */
+    transfer_group_id?: string | null;
+    /**
+     * True on the leg written into the destination account's history; its `account_id` is
+     * the destination and `target_account_id` the origin (see `transferEnds`).
+     */
+    is_transfer_mirror?: boolean;
 };
 
 export type TransactionInput = {
@@ -27,7 +41,7 @@ export type TransactionInput = {
     account_id: string;
     target_account_id?: string;
     /** "transfer" moves money between two accounts and requires `target_account_id`. */
-    type: TransactionType | "transfer";
+    type: TransactionKind;
 };
 
 /** Draft built by the API from a free-text sentence; nothing is saved until the user confirms the form. */
