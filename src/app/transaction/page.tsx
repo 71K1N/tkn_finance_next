@@ -2,8 +2,8 @@
 import { Suspense, useCallback, useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Trash2, Edit, DollarSign, Plus, List, Calendar, Tag, Filter, Upload } from 'react-feather';
-import swal from 'sweetalert';
 import { notifyError, notifySuccess } from "@/lib/ui/notify";
+import { useConfirm } from "@/components/common/ConfirmProvider";
 import { Button, DataTable, PageHeader, type DataTableColumn, type DataTableAction, type DataTableHandle, type DataTableRequestParams } from "tikin-uai";
 import { Card, Container, HStack, Text } from "@chakra-ui/react";
 import StatusBadge from "@/components/StatusBadge";
@@ -24,6 +24,7 @@ import type { BankAccount } from "@/lib/types/bank-account";
 import { useFormatCurrency } from "@/lib/hooks/useFormatCurrency";
 import { currentMonthRange, formatDateBR, periodFromSearchParams } from "@/lib/utils/date";
 import { getErrorMessage } from "@/lib/utils/api-error";
+import { isTransfer, transferEnds } from "@/lib/utils/transfer";
 
 export default function PageTransaction() {
     // useSearchParams opts the page out of static prerendering unless it sits under a boundary.
@@ -40,6 +41,7 @@ function TransactionPageContent() {
     // Period handed over by a link (e.g. the home heatmap's day cells); otherwise the current month.
     const urlPeriod = periodFromSearchParams(searchParams);
     const formatCurrency = useFormatCurrency();
+    const confirm = useConfirm();
     const [loading, setLoading] = useState<boolean>(false);
 
     const [categories, setCategories] = useState<Category[]>([]);
@@ -156,31 +158,33 @@ function TransactionPageContent() {
     }
 
     async function remove(item: Transaction) {
-        swal({
+        const transfer = isTransfer(item);
+        const confirmed = await confirm({
             title: "Confirmação",
-            text: "Tem certeza que deseja excluir esta transação?",
-            icon: "warning",
-            dangerMode: true,
-            buttons: ["Cancelar", "Excluir"],
-        }).then(async (willDelete) => {
-            if (willDelete) {
-                setLoading(true);
-                try {
-                    await removeTransaction(item.id);
-                    notifySuccess("Transação excluída com sucesso!");
-                    tableRef.current?.refetch();
-                    loadSummary();
-                } catch (error) {
-                    const message = getErrorMessage(error, "Não foi possível excluir a transação", {
-                        404: "Transação não encontrada. Ela pode já ter sido excluída.",
-                    });
-                    notifyError(message);
-                    tableRef.current?.refetch();
-                } finally {
-                    setLoading(false);
-                }
-            }
+            // The API deletes both legs of a transfer and reverts both balances.
+            text: transfer
+                ? "Tem certeza que deseja excluir esta transferência? Ela sai das duas contas."
+                : "Tem certeza que deseja excluir esta transação?",
+            confirmLabel: "Excluir",
+            tone: "danger",
         });
+        if (!confirmed) return;
+
+        setLoading(true);
+        try {
+            await removeTransaction(item.id);
+            notifySuccess(transfer ? "Transferência excluída com sucesso!" : "Transação excluída com sucesso!");
+            tableRef.current?.refetch();
+            loadSummary();
+        } catch (error) {
+            const message = getErrorMessage(error, "Não foi possível excluir a transação", {
+                404: "Transação não encontrada. Ela pode já ter sido excluída.",
+            });
+            notifyError(message);
+            tableRef.current?.refetch();
+        } finally {
+            setLoading(false);
+        }
     }
 
     function openPayment(item: Transaction) {
@@ -207,7 +211,9 @@ function TransactionPageContent() {
         {
             key: "subcategory_id",
             header: "Categoria",
-            render: (row) => (
+            render: (row) => isTransfer(row) ? (
+                <Text color="text.muted">—</Text>
+            ) : (
                 <HStack gap={2}>
                     <Text>{categoryName(row.subcategory_id)} - {subcategoryName(row.subcategory_id)}</Text>
                 </HStack>
@@ -217,7 +223,11 @@ function TransactionPageContent() {
         {
             key: "account_id",
             header: "Conta",
-            render: (row) => accountName(row.account_id),
+            render: (row) => {
+                if (!isTransfer(row)) return accountName(row.account_id);
+                const { fromId, toId } = transferEnds(row);
+                return `${accountName(fromId)} → ${accountName(toId)}`;
+            },
             width: "70px",
         },
         
@@ -257,7 +267,9 @@ function TransactionPageContent() {
             key: "is_planned",
             header: "Intenção",
             sortable: true,
-            render: (row) => (
+            render: (row) => isTransfer(row) ? (
+                <Text color="text.muted">—</Text>
+            ) : (
                 <StatusBadge status={row.is_planned ? "neutral" : "warning"} variant="surface">
                     {row.is_planned ? "Planejado" : "Impulsivo"}
                 </StatusBadge>
@@ -268,19 +280,24 @@ function TransactionPageContent() {
             key: "type",
             header: "Tipo",
             sortable: true,
-            render: (row) => (
-                <StatusBadge status={row.type === 'EXPENSE' ? "danger" : "success"} variant="surface">
-                    {row.type === 'EXPENSE' ? "Despesa" : "Receita"}
-                </StatusBadge>
-            ),
-            width: "100px",
+            render: (row) => {
+                if (isTransfer(row)) {
+                    return <StatusBadge status="info" variant="surface">Transferência</StatusBadge>;
+                }
+                return (
+                    <StatusBadge status={row.type === 'EXPENSE' ? "danger" : "success"} variant="surface">
+                        {row.type === 'EXPENSE' ? "Despesa" : "Receita"}
+                    </StatusBadge>
+                );
+            },
+            width: "130px",
         },
         {
             key: "amount",
             header: "Valor",
             sortable: true,
             render: (row) => (
-                <Text color={row.type === 'EXPENSE' ? 'red.solid' : 'green.solid'}>
+                <Text color={isTransfer(row) ? 'fg' : row.type === 'EXPENSE' ? 'red.solid' : 'green.solid'}>
                     {formatCurrency(row.amount)}
                 </Text>
             ),
@@ -292,7 +309,8 @@ function TransactionPageContent() {
         {
             label: "Registrar Pagamento",
             icon: <DollarSign size={16} />,
-            isDisabled: (row) => !!row.payment_date,
+            // Transfers are settled when created; there is nothing to pay.
+            isDisabled: (row) => !!row.payment_date || isTransfer(row),
             onClick: openPayment,
         },
         { label: "Editar", icon: <Edit size={16} />, onClick: edit },

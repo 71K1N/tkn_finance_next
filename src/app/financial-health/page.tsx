@@ -41,8 +41,14 @@ function getLastThreeMonths(): { year: number; month: number; label: string }[] 
     });
 }
 
-function computeMetrics(transactions: Transaction[]): DashboardMetrics {
+function isIncomeOrExpense(t: Transaction): t is Transaction & { type: 'EXPENSE' | 'INCOME' } {
+    return t.type === 'EXPENSE' || t.type === 'INCOME';
+}
+
+function computeMetrics(allTransactions: Transaction[]): DashboardMetrics {
     const today = todayLocalISO();
+    // Transfers only move money between the user's own accounts: never income, expense or savings.
+    const transactions = allTransactions.filter(isIncomeOrExpense);
 
     const debtBalance = transactions
         .filter(t => t.type === 'EXPENSE' && !t.payment_date)
